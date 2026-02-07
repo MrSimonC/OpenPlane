@@ -12,6 +12,20 @@
                 <VerticalStackLayout Spacing="12" FlexLayout.Basis="500" FlexLayout.Grow="1" FlexLayout.Shrink="1">
                     <Frame Padding="12" BorderColor="LightGray">
                         <VerticalStackLayout Spacing="8">
+                            <Label Text="Workspace" FontAttributes="Bold" />
+                            <Picker ItemsSource="{Binding Workspaces}"
+                                    SelectedItem="{Binding SelectedWorkspaceId}"
+                                    SelectedIndexChanged="OnWorkspaceSelectionChanged" />
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                <Entry Grid.Column="0" Text="{Binding NewWorkspaceId}" Placeholder="workspace-id" />
+                                <Button Grid.Column="1" Text="Add" Clicked="OnAddWorkspaceClicked" />
+                                <Button Grid.Column="2" Text="Remove Current" Clicked="OnRemoveWorkspaceClicked" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="12" BorderColor="LightGray">
+                        <VerticalStackLayout Spacing="8">
                             <Label Text="Workspace Grants" FontAttributes="Bold" />
                             <Entry Text="{Binding NewGrantPath}" Placeholder="/absolute/path/to/workspace" />
                             <Button Text="Add Folder Grant" Clicked="OnAddGrantClicked" HorizontalOptions="Start" />

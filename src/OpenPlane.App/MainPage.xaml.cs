@@ -43,6 +43,24 @@ public partial class MainPage : ContentPage
         await ExecuteUiActionAsync(token => viewModel.AddFolderGrantAsync(token), "Add Grant Error");
     }
 
+    private async void OnAddWorkspaceClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.AddWorkspaceAsync(token), "Add Workspace Error");
+    }
+
+    private async void OnRemoveWorkspaceClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.RemoveSelectedWorkspaceAsync(token), "Remove Workspace Error");
+    }
+
+    private async void OnWorkspaceSelectionChanged(object sender, EventArgs e)
+    {
+        if (sender is Picker { SelectedItem: string workspaceId })
+        {
+            await ExecuteUiActionAsync(token => viewModel.ChangeWorkspaceAsync(workspaceId, token), "Workspace Switch Error");
+        }
+    }
+
     private async void OnRemoveGrantClicked(object sender, EventArgs e)
     {
         if (sender is Button { CommandParameter: string path })

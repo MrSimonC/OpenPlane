@@ -17,9 +17,10 @@ public sealed class MainPageViewModel(
     IFileToolService fileToolService,
     ICopilotAuthService authService,
     ICopilotExecutionService executionService,
+    IWorkspaceSettingsStore workspaceSettingsStore,
     ICopilotHealthService healthService) : INotifyPropertyChanged
 {
-    private const string WorkspaceId = "default";
+    private const string DefaultWorkspaceId = "default";
     private string prompt = "What is 2 + 2?";
     private string selectedModel = "gpt-5-mini";
     private bool isAuthenticated;
@@ -33,6 +34,8 @@ public sealed class MainPageViewModel(
     private string verificationUrl = string.Empty;
     private string manualCommandGuidance = string.Empty;
     private string newGrantPath = string.Empty;
+    private string selectedWorkspaceId = DefaultWorkspaceId;
+    private string newWorkspaceId = string.Empty;
     private bool canStop;
     private CancellationTokenSource? activeOperationCts;
     private string? activeOperationName;
@@ -43,6 +46,7 @@ public sealed class MainPageViewModel(
 
     public ObservableCollection<string> Timeline { get; } = [];
     public ObservableCollection<string> GrantedFolders { get; } = [];
+    public ObservableCollection<string> Workspaces { get; } = [];
 
     public string Prompt
     {
@@ -66,6 +70,18 @@ public sealed class MainPageViewModel(
     {
         get => newGrantPath;
         set => SetProperty(ref newGrantPath, value);
+    }
+
+    public string SelectedWorkspaceId
+    {
+        get => selectedWorkspaceId;
+        private set => SetProperty(ref selectedWorkspaceId, value);
+    }
+
+    public string NewWorkspaceId
+    {
+        get => newWorkspaceId;
+        set => SetProperty(ref newWorkspaceId, value);
     }
 
     public bool IsAuthenticated
@@ -175,10 +191,73 @@ public sealed class MainPageViewModel(
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
+        await LoadWorkspaceSettingsAsync(cancellationToken);
         await LoadWorkspacePolicyAsync(cancellationToken);
         await RunHealthChecksAsync(cancellationToken);
         await LoadModelsAsync(cancellationToken);
         await RefreshAuthStatusAsync(cancellationToken);
+    }
+
+    public async Task AddWorkspaceAsync(CancellationToken cancellationToken)
+    {
+        var workspaceId = NormalizeWorkspaceId(NewWorkspaceId);
+        if (string.IsNullOrWhiteSpace(workspaceId))
+        {
+            AddTimeline("Workspace ID is empty.");
+            return;
+        }
+
+        if (Workspaces.Contains(workspaceId, StringComparer.OrdinalIgnoreCase))
+        {
+            AddTimeline($"Workspace already exists: {workspaceId}");
+            return;
+        }
+
+        Workspaces.Add(workspaceId);
+        NewWorkspaceId = string.Empty;
+        await ChangeWorkspaceAsync(workspaceId, cancellationToken);
+        AddTimeline($"Added workspace: {workspaceId}");
+    }
+
+    public async Task RemoveSelectedWorkspaceAsync(CancellationToken cancellationToken)
+    {
+        if (Workspaces.Count <= 1)
+        {
+            AddTimeline("At least one workspace must remain.");
+            return;
+        }
+
+        var current = Workspaces.FirstOrDefault(x => string.Equals(x, SelectedWorkspaceId, StringComparison.OrdinalIgnoreCase));
+        if (current is null)
+        {
+            return;
+        }
+
+        Workspaces.Remove(current);
+        var next = Workspaces.FirstOrDefault() ?? DefaultWorkspaceId;
+        await ChangeWorkspaceAsync(next, cancellationToken);
+        AddTimeline($"Removed workspace: {current}");
+    }
+
+    public async Task ChangeWorkspaceAsync(string workspaceId, CancellationToken cancellationToken)
+    {
+        var normalized = NormalizeWorkspaceId(workspaceId);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        var matched = Workspaces.FirstOrDefault(x => string.Equals(x, normalized, StringComparison.OrdinalIgnoreCase)) ?? normalized;
+        if (!Workspaces.Contains(matched, StringComparer.OrdinalIgnoreCase))
+        {
+            Workspaces.Add(matched);
+        }
+
+        SelectedWorkspaceId = matched;
+        await SaveWorkspaceSettingsAsync(cancellationToken);
+        await LoadWorkspacePolicyAsync(cancellationToken);
+        await LoadModelsAsync(cancellationToken);
+        AddTimeline($"Switched workspace: {SelectedWorkspaceId}");
     }
 
     public async Task AddFolderGrantAsync(CancellationToken cancellationToken)
@@ -190,7 +269,7 @@ public sealed class MainPageViewModel(
         }
 
         var fullPath = Path.GetFullPath(NewGrantPath.Trim());
-        var current = await workspacePolicyStore.GetAsync(WorkspaceId, cancellationToken);
+        var current = await workspacePolicyStore.GetAsync(SelectedWorkspaceId, cancellationToken);
 
         if (!Directory.Exists(fullPath))
         {
@@ -213,7 +292,7 @@ public sealed class MainPageViewModel(
 
         if (updated.NetworkAllowlist.AllowedHosts.Count == 0)
         {
-            updated = networkPolicyService.WithDefaultAllowlist(WorkspaceId, updated.PathGrants);
+            updated = networkPolicyService.WithDefaultAllowlist(SelectedWorkspaceId, updated.PathGrants);
         }
 
         await workspacePolicyStore.SaveAsync(updated, cancellationToken);
@@ -230,7 +309,7 @@ public sealed class MainPageViewModel(
         }
 
         var fullPath = Path.GetFullPath(path);
-        var current = await workspacePolicyStore.GetAsync(WorkspaceId, cancellationToken);
+        var current = await workspacePolicyStore.GetAsync(SelectedWorkspaceId, cancellationToken);
         var filtered = current.PathGrants
             .Where(grant => !string.Equals(Path.GetFullPath(grant.AbsolutePath), fullPath, StringComparison.OrdinalIgnoreCase))
             .ToArray();
@@ -247,7 +326,7 @@ public sealed class MainPageViewModel(
 
     public async Task SaveModelSelectionAsync(CancellationToken cancellationToken)
     {
-        await modelCatalogService.SaveModelSelectionAsync(new ModelSelection(WorkspaceId, SelectedModel), cancellationToken);
+        await modelCatalogService.SaveModelSelectionAsync(new ModelSelection(SelectedWorkspaceId, SelectedModel), cancellationToken);
         AddTimeline($"Model saved: {SelectedModel}");
     }
 
@@ -392,14 +471,14 @@ public sealed class MainPageViewModel(
             }
 
             await historyRepository.AddEntryAsync(
-                new ConversationEntry(Guid.NewGuid().ToString("N"), WorkspaceId, "user", Prompt, DateTimeOffset.UtcNow),
+                new ConversationEntry(Guid.NewGuid().ToString("N"), SelectedWorkspaceId, "user", Prompt, DateTimeOffset.UtcNow),
                 operationToken);
 
             var assistantOutput = await executionService.ExecutePromptAsync(Prompt, SelectedModel, operationToken);
             AddTimeline($"Assistant: {assistantOutput}");
 
             await historyRepository.AddEntryAsync(
-                new ConversationEntry(Guid.NewGuid().ToString("N"), WorkspaceId, "assistant", assistantOutput, DateTimeOffset.UtcNow),
+                new ConversationEntry(Guid.NewGuid().ToString("N"), SelectedWorkspaceId, "assistant", assistantOutput, DateTimeOffset.UtcNow),
                 operationToken);
         }
         catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
@@ -422,7 +501,7 @@ public sealed class MainPageViewModel(
 
     private async Task<string> ExecuteToolPromptAsync(CancellationToken cancellationToken)
     {
-        var policy = await workspacePolicyStore.GetAsync(WorkspaceId, cancellationToken);
+        var policy = await workspacePolicyStore.GetAsync(SelectedWorkspaceId, cancellationToken);
         var payload = Prompt.Trim()["tool:".Length..];
         var separator = payload.IndexOf('|');
         var op = separator >= 0 ? payload[..separator] : payload;
@@ -468,7 +547,7 @@ public sealed class MainPageViewModel(
             Models.Add(model.Id);
         }
 
-        var selection = await modelCatalogService.GetModelSelectionAsync(WorkspaceId, cancellationToken);
+        var selection = await modelCatalogService.GetModelSelectionAsync(SelectedWorkspaceId, cancellationToken);
         SelectedModel = Models.Any(model => string.Equals(model, selection.ModelId, StringComparison.OrdinalIgnoreCase))
             ? selection.ModelId
             : "gpt-5-mini";
@@ -476,7 +555,7 @@ public sealed class MainPageViewModel(
 
     private async Task LoadWorkspacePolicyAsync(CancellationToken cancellationToken)
     {
-        var policy = await workspacePolicyStore.GetAsync(WorkspaceId, cancellationToken);
+        var policy = await workspacePolicyStore.GetAsync(SelectedWorkspaceId, cancellationToken);
         var sorted = policy.PathGrants
             .Select(grant => Path.GetFullPath(grant.AbsolutePath))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -488,6 +567,39 @@ public sealed class MainPageViewModel(
         {
             GrantedFolders.Add(path);
         }
+    }
+
+    private async Task LoadWorkspaceSettingsAsync(CancellationToken cancellationToken)
+    {
+        var settings = await workspaceSettingsStore.LoadAsync(cancellationToken);
+
+        Workspaces.Clear();
+        foreach (var workspaceId in settings.WorkspaceIds.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            Workspaces.Add(workspaceId);
+        }
+
+        if (Workspaces.Count == 0)
+        {
+            Workspaces.Add(DefaultWorkspaceId);
+        }
+
+        SelectedWorkspaceId = Workspaces.FirstOrDefault(x => string.Equals(x, settings.SelectedWorkspaceId, StringComparison.OrdinalIgnoreCase))
+            ?? Workspaces[0];
+    }
+
+    private async Task SaveWorkspaceSettingsAsync(CancellationToken cancellationToken)
+    {
+        await workspaceSettingsStore.SaveAsync(
+            new WorkspaceSettings(
+                Workspaces.ToArray(),
+                SelectedWorkspaceId),
+            cancellationToken);
+    }
+
+    private static string NormalizeWorkspaceId(string? value)
+    {
+        return value?.Trim() ?? string.Empty;
     }
 
     private async Task RunHealthChecksAsync(CancellationToken cancellationToken)

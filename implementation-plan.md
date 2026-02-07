@@ -22,7 +22,7 @@ Build a desktop-first (.NET MAUI on macOS + Windows) Copilot-SDK-powered coworki
 ## Known Gaps / Issues to Resolve
 1. MacCatalyst process execution remains fragile for spawning external CLI in-app; depending on host setup/policy, `Operation not permitted` can still occur.
 2. Execution pipeline currently supports prompt->response, but not full autonomous multi-step coding operations with durable run engine semantics.
-3. Workspace support is still single-workspace (`default`) and does not yet include multi-workspace management UX.
+3. Workspace policy UX is implemented, but still lightweight (workspace IDs only; no richer metadata/project detection yet).
 4. Network allowlist policy is modeled but not fully enforced across all outbound channels.
 5. MCP implementation is currently in-memory/scaffold level, not fully dynamic/process-managed.
 6. File-type adapter support is still minimal.
@@ -73,7 +73,7 @@ Acceptance:
 Goal: implement real scoped local access controls.
 
 Tasks:
-- [~] Add workspace model and settings UI:
+- [x] Add workspace model and settings UI:
   - workspace list
   - granted folders list/add/remove
 - [x] Wire `IAccessPolicyService` to all file operations.
