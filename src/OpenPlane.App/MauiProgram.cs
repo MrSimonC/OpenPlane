@@ -28,6 +28,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ICopilotClientOptionsFactory, CopilotClientOptionsFactory>();
 		builder.Services.AddSingleton<ICopilotExecutionSettingsStore>(_ => new JsonCopilotExecutionSettingsStore("OpenPlane"));
 		builder.Services.AddSingleton<IWorkspaceSettingsStore>(_ => new JsonWorkspaceSettingsStore("OpenPlane"));
+		builder.Services.AddSingleton<INetworkPolicyGuard, NetworkPolicyGuard>();
+		builder.Services.AddSingleton<ILocalLogService>(_ => new LocalLogService("OpenPlane"));
 		builder.Services.AddSingleton<ICopilotHealthService, CopilotHealthService>();
 		builder.Services.AddSingleton<ICopilotModelProvider, CopilotModelProvider>();
 		builder.Services.AddSingleton<ICopilotAuthService, CopilotAuthService>();
@@ -38,13 +40,15 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IRunStateStore>(_ => new JsonRunStateStore("OpenPlane"));
 		builder.Services.AddSingleton<EncryptionService>(_ => new EncryptionService("OpenPlane"));
 		builder.Services.AddSingleton<IHistoryRepository>(provider => new EncryptedHistoryRepository(provider.GetRequiredService<EncryptionService>(), "OpenPlane"));
-		builder.Services.AddSingleton<IConnectorRegistry, InMemoryConnectorRegistry>();
-		builder.Services.AddSingleton<IMcpConnectorBroker, InMemoryMcpConnectorBroker>();
+		builder.Services.AddSingleton<IConnectorRegistry>(_ => new JsonConnectorRegistry("OpenPlane"));
+		builder.Services.AddSingleton<IMcpConnectorBroker, ProcessMcpConnectorBroker>();
 		builder.Services.AddSingleton<IPlannerService, PlannerService>();
 		builder.Services.AddSingleton<IApprovalService, ApprovalService>();
 		builder.Services.AddSingleton<IPlanExecutionService, PlanExecutionService>();
 		builder.Services.AddSingleton<IFileToolService, FileToolService>();
-		builder.Services.AddSingleton<IAgentExecutor, InlineAgentExecutor>();
+		builder.Services.AddSingleton<IPromptAttachmentResolver, PromptAttachmentResolver>();
+		builder.Services.AddSingleton<WorkerAgentExecutor>();
+		builder.Services.AddSingleton<IAgentExecutor>(provider => provider.GetRequiredService<WorkerAgentExecutor>());
 		builder.Services.AddSingleton<IRunOrchestrator, RunOrchestrator>();
 		builder.Services.AddSingleton<IAccessPolicyService, AccessPolicyService>();
 		builder.Services.AddSingleton<INetworkPolicyService, NetworkPolicyService>();

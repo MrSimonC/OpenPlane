@@ -17,7 +17,8 @@ public interface ICopilotHealthService
 
 public sealed class CopilotHealthService(
     ICopilotClientOptionsFactory optionsFactory,
-    ICopilotExecutionSettingsStore settingsStore) : ICopilotHealthService
+    ICopilotExecutionSettingsStore settingsStore,
+    INetworkPolicyGuard networkPolicyGuard) : ICopilotHealthService
 {
     public async Task<CopilotHealthReport> CheckAsync(CancellationToken cancellationToken)
     {
@@ -33,6 +34,7 @@ public sealed class CopilotHealthService(
         var modelProbeSucceeded = false;
         try
         {
+            await networkPolicyGuard.EnsureDefaultCopilotHostsAllowedAsync(cancellationToken);
             await using var client = new CopilotClient(optionsFactory.Create(settings));
             await client.StartAsync();
             var models = await client.ListModelsAsync();

@@ -156,6 +156,28 @@ public sealed class PlanExecutionServiceTests
             return Task.FromResult(session);
         }
 
+        public Task<int> RecoverRunningSessionsAsync(CancellationToken cancellationToken)
+        {
+            var recovered = 0;
+            foreach (var (runId, session) in sessions.ToArray())
+            {
+                if (session.Status != RunStatus.Running)
+                {
+                    continue;
+                }
+
+                sessions[runId] = session with
+                {
+                    Status = RunStatus.Failed,
+                    CompletedAtUtc = DateTimeOffset.UtcNow,
+                    FailureReason = "Recovered after unexpected shutdown."
+                };
+                recovered++;
+            }
+
+            return Task.FromResult(recovered);
+        }
+
         public Task SaveStepStatesAsync(string runId, IReadOnlyList<RunStepState> stepStates, CancellationToken cancellationToken)
         {
             steps[runId] = stepStates.ToArray();

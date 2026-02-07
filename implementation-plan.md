@@ -20,13 +20,8 @@ Build a desktop-first (.NET MAUI on macOS + Windows) Copilot-SDK-powered coworki
 - Execution cancellation support added in app UI/runtime (`Stop` button + in-flight cancellation propagation).
 
 ## Known Gaps / Issues to Resolve
-1. MacCatalyst process execution remains fragile for spawning external CLI in-app; depending on host setup/policy, `Operation not permitted` can still occur.
-2. Execution pipeline currently supports prompt->response, but not full autonomous multi-step coding operations with durable run engine semantics.
-3. Workspace policy UX is implemented, but still lightweight (workspace IDs only; no richer metadata/project detection yet).
-4. Network allowlist editor is now available per workspace, but enforcement is not yet complete across all outbound channels/SDK traffic.
-5. MCP implementation is currently in-memory/scaffold level, not fully dynamic/process-managed.
-6. File-type adapter support is still minimal.
-7. Worker isolation boundary and connector/process management remain pending for production hardening.
+1. MacCatalyst host policy and environment variability can still affect external process startup in some machines.
+2. Plan decomposition quality is currently heuristic-first and can be further improved with richer model guidance and evaluation loops.
 
 ## Implementation Principles
 - Keep `gpt-5-mini` as default model, with runtime discovery + user override.
@@ -113,12 +108,12 @@ Acceptance:
 Goal: move execution out of UI process into isolated worker.
 
 Tasks:
-- Implement worker host protocol (IPC):
+- [x] Implement worker host protocol (IPC):
   - request/response envelopes
   - event streaming
-- Run file/network tool execution in worker process.
-- Add worker lifecycle and heartbeat supervision.
-- Route all privileged operations through worker boundary.
+- [x] Run file/network tool execution in worker process.
+- [x] Add worker lifecycle and heartbeat supervision.
+- [x] Route all privileged operations through worker boundary.
 
 Deliverables:
 - Isolated execution architecture with clear boundary.
@@ -132,8 +127,8 @@ Goal: enforce outbound network policy.
 Tasks:
 - [x] Add per-workspace allowlist editor UI.
 - [x] Include default preset (`GitHub + Copilot endpoints`).
-- [~] Enforce allowlist in all app/worker HTTP clients.
-- [ ] Add explicit deny event reporting.
+- [x] Enforce allowlist in all app/worker HTTP clients.
+- [x] Add explicit deny event reporting.
 
 Deliverables:
 - Effective outbound control with user-managed policy.
@@ -145,11 +140,11 @@ Acceptance:
 Goal: deliver practical connector support.
 
 Tasks:
-- Replace in-memory connector broker with real connector lifecycle manager.
-- Add connector config persistence (command, env, scopes).
-- Start/stop and health-check connectors.
-- Expose connector status and failures in UI.
-- Integrate connector tools into agent execution context.
+- [x] Replace in-memory connector broker with real connector lifecycle manager.
+- [x] Add connector config persistence (command, env, scopes).
+- [x] Start/stop and health-check connectors.
+- [x] Expose connector status and failures in UI.
+- [x] Integrate connector tools into agent execution context.
 
 Deliverables:
 - Config-driven connector management and use in runs.
@@ -161,15 +156,15 @@ Acceptance:
 Goal: broader file support.
 
 Tasks:
-- Text-native editing (md/txt/json/yaml/xml/toml/csv/code) harden and test.
-- Add extract-only adapters for complex formats:
+- [x] Text-native editing (md/txt/json/yaml/xml/toml/csv/code) harden and test.
+- [x] Add extract-only adapters for complex formats:
   - PDF
   - Office docs
   - spreadsheets
   - presentations
   - images
   - notebooks
-- Provide clear fallback behavior when write-back unsupported.
+- [x] Provide clear fallback behavior when write-back unsupported.
 
 Deliverables:
 - Predictable file handling matrix by type + capability.
@@ -181,10 +176,10 @@ Acceptance:
 Goal: production-grade local persistence and observability.
 
 Tasks:
-- Add schema versioning/migrations for local storage.
-- Harden encrypted history key handling and rotation path.
-- Add crash recovery for in-progress runs.
-- Add structured local logs (opt-in) and export for diagnostics.
+- [x] Add schema versioning/migrations for local storage.
+- [x] Harden encrypted history key handling and rotation path.
+- [x] Add crash recovery for in-progress runs.
+- [x] Add structured local logs (opt-in) and export for diagnostics.
 
 Deliverables:
 - Durable local state and debuggability.

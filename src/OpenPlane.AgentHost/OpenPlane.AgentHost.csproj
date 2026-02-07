@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\OpenPlane.Core\OpenPlane.Core.csproj" />
     <ProjectReference Include="..\OpenPlane.Connectors.Mcp\OpenPlane.Connectors.Mcp.csproj" />
+    <ProjectReference Include="..\OpenPlane.Storage\OpenPlane.Storage.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

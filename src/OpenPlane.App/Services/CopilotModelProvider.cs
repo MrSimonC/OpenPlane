@@ -7,17 +7,23 @@ public sealed class CopilotModelProvider : ICopilotModelProvider
 {
     private readonly ICopilotClientOptionsFactory optionsFactory;
     private readonly ICopilotExecutionSettingsStore settingsStore;
+    private readonly INetworkPolicyGuard networkPolicyGuard;
 
-    public CopilotModelProvider(ICopilotClientOptionsFactory optionsFactory, ICopilotExecutionSettingsStore settingsStore)
+    public CopilotModelProvider(
+        ICopilotClientOptionsFactory optionsFactory,
+        ICopilotExecutionSettingsStore settingsStore,
+        INetworkPolicyGuard networkPolicyGuard)
     {
         this.optionsFactory = optionsFactory;
         this.settingsStore = settingsStore;
+        this.networkPolicyGuard = networkPolicyGuard;
     }
 
     public async Task<IReadOnlyList<string>> GetModelIdsAsync(CancellationToken cancellationToken)
     {
         try
         {
+            await networkPolicyGuard.EnsureDefaultCopilotHostsAllowedAsync(cancellationToken);
             var settings = await settingsStore.LoadAsync(cancellationToken);
             await using var client = new CopilotClient(optionsFactory.Create(settings));
 

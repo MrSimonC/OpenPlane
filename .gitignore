@@ -425,6 +425,13 @@ test-results/
 # Mac bundle stuff
 *.dmg
 *.app
+!src/OpenPlane.App/
+!src/OpenPlane.App/**
+src/OpenPlane.App/bin/
+src/OpenPlane.App/obj/
+src/OpenPlane.App/OpenPlane.App.app/
+src/OpenPlane.App/runtimes/
+src/OpenPlane.App/copilot-cli/
 
 # content below from: https://github.com/github/gitignore/blob/main/Global/macOS.gitignore
 # General

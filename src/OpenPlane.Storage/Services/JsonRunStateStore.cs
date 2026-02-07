@@ -32,6 +32,36 @@ public sealed class JsonRunStateStore(string appName) : IRunStateStore
         return all.TryGetValue(runId, out var session) ? session : null;
     }
 
+    public async Task<int> RecoverRunningSessionsAsync(CancellationToken cancellationToken)
+    {
+        var all = await LoadSessionsAsync(cancellationToken);
+        var recovered = 0;
+
+        foreach (var (runId, session) in all.ToArray())
+        {
+            if (session.Status != RunStatus.Running)
+            {
+                continue;
+            }
+
+            all[runId] = session with
+            {
+                Status = RunStatus.Failed,
+                CompletedAtUtc = DateTimeOffset.UtcNow,
+                FailureReason = "Recovered after unexpected shutdown."
+            };
+
+            recovered++;
+        }
+
+        if (recovered > 0)
+        {
+            await SaveSessionsAsync(all, cancellationToken);
+        }
+
+        return recovered;
+    }
+
     public async Task SaveStepStatesAsync(string runId, IReadOnlyList<RunStepState> steps, CancellationToken cancellationToken)
     {
         var all = await LoadStepStatesAsync(cancellationToken);

@@ -5,11 +5,20 @@ namespace OpenPlane.Core.Services;
 
 public sealed class FileToolService(IAccessPolicyService accessPolicyService) : IFileToolService
 {
+    private readonly IAccessPolicyService accessPolicyService = accessPolicyService;
+    private readonly IFileAdapterService adapterService = new FileAdapterService();
+
+    public FileToolService(IAccessPolicyService accessPolicyService, IFileAdapterService adapterService)
+        : this(accessPolicyService)
+    {
+        this.adapterService = adapterService;
+    }
+
     public async Task<string> ReadFileAsync(string path, WorkspacePolicy policy, CancellationToken cancellationToken)
     {
         var fullPath = Canonicalize(path);
         EnsureAllowed(accessPolicyService.CanRead(fullPath, policy), $"Read denied by policy for path: {fullPath}");
-        return await File.ReadAllTextAsync(fullPath, cancellationToken);
+        return await adapterService.ReadAsync(fullPath, cancellationToken);
     }
 
     public Task<IReadOnlyList<string>> SearchFilesAsync(string rootPath, string fileNamePattern, WorkspacePolicy policy, CancellationToken cancellationToken)
@@ -32,7 +41,8 @@ public sealed class FileToolService(IAccessPolicyService accessPolicyService) : 
     {
         var fullPath = Canonicalize(path);
         EnsureAllowed(accessPolicyService.CanWrite(fullPath, policy), $"Write denied by policy for path: {fullPath}");
-        await File.WriteAllTextAsync(fullPath, content, cancellationToken);
+        EnsureAllowed(adapterService.CanWrite(fullPath), $"Write denied by adapter for path: {fullPath}. {adapterService.DescribeCapability(fullPath)}");
+        await adapterService.WriteAsync(fullPath, content, cancellationToken);
     }
 
     public async Task CreateFileAsync(string path, string content, WorkspacePolicy policy, CancellationToken cancellationToken)
@@ -46,7 +56,8 @@ public sealed class FileToolService(IAccessPolicyService accessPolicyService) : 
             Directory.CreateDirectory(directory);
         }
 
-        await File.WriteAllTextAsync(fullPath, content, cancellationToken);
+        EnsureAllowed(adapterService.CanWrite(fullPath), $"Create/write denied by adapter for path: {fullPath}. {adapterService.DescribeCapability(fullPath)}");
+        await adapterService.WriteAsync(fullPath, content, cancellationToken);
     }
 
     public Task CreateFolderAsync(string path, WorkspacePolicy policy, CancellationToken cancellationToken)

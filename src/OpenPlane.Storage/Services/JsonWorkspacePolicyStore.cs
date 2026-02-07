@@ -4,10 +4,17 @@ using OpenPlane.Core.Models;
 
 namespace OpenPlane.Storage.Services;
 
-public sealed class JsonWorkspacePolicyStore(string appName) : IWorkspacePolicyStore
+public sealed class JsonWorkspacePolicyStore : IWorkspacePolicyStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly string settingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName, "workspace-policies.json");
+    private readonly string settingsPath;
+
+    public JsonWorkspacePolicyStore(string appName, string? settingsPathOverride = null)
+    {
+        settingsPath = string.IsNullOrWhiteSpace(settingsPathOverride)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName, "workspace-policies.json")
+            : Path.GetFullPath(settingsPathOverride);
+    }
 
     public async Task<WorkspacePolicy> GetAsync(string workspaceId, CancellationToken cancellationToken)
     {

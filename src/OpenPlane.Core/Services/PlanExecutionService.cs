@@ -10,6 +10,11 @@ public sealed class PlanExecutionService(
     IExecutionPlanStore executionPlanStore,
     IRunStateStore runStateStore) : IPlanExecutionService
 {
+    public Task<int> RecoverRunningRunsAsync(CancellationToken cancellationToken)
+    {
+        return runStateStore.RecoverRunningSessionsAsync(cancellationToken);
+    }
+
     public async Task<ExecutionPlan> CreatePlanAsync(string workspaceId, string prompt, CancellationToken cancellationToken)
     {
         var plan = await plannerService.CreatePlanAsync(prompt, cancellationToken);

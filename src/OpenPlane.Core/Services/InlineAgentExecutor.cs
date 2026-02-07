@@ -7,8 +7,6 @@ public sealed class InlineAgentExecutor(
     IFileToolService fileToolService,
     IWorkspacePolicyStore workspacePolicyStore) : IAgentExecutor
 {
-    private const string WorkspaceId = "default";
-
     public async Task<string> ExecuteStepAsync(PlanStep step, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -28,7 +26,8 @@ public sealed class InlineAgentExecutor(
         var op = separator >= 0 ? payload[..separator] : payload;
         var argsRaw = separator >= 0 ? payload[(separator + 1)..] : string.Empty;
         var args = argsRaw.Split('|', StringSplitOptions.None);
-        var policy = await workspacePolicyStore.GetAsync(WorkspaceId, cancellationToken);
+        var workspaceId = ResolveWorkspaceId();
+        var policy = await workspacePolicyStore.GetAsync(workspaceId, cancellationToken);
 
         switch (op.Trim().ToLowerInvariant())
         {
@@ -62,5 +61,11 @@ public sealed class InlineAgentExecutor(
         {
             throw new InvalidOperationException($"Invalid `{operation}` tool arguments.");
         }
+    }
+
+    private static string ResolveWorkspaceId()
+    {
+        var fromEnvironment = Environment.GetEnvironmentVariable("OPENPLANE_WORKSPACE_ID");
+        return string.IsNullOrWhiteSpace(fromEnvironment) ? "default" : fromEnvironment.Trim();
     }
 }

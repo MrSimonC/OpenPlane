@@ -63,4 +63,11 @@ public sealed class EncryptionService
         await File.WriteAllTextAsync(keyPath, Convert.ToBase64String(key), cancellationToken);
         return key;
     }
+
+    public async Task RotateKeyAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var key = RandomNumberGenerator.GetBytes(32);
+        await File.WriteAllTextAsync(keyPath, Convert.ToBase64String(key), cancellationToken);
+    }
 }

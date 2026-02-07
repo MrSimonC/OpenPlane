@@ -18,6 +18,11 @@ public sealed class NetworkPolicyService : INetworkPolicyService
         return policy.NetworkAllowlist.AllowedHosts.Contains(host);
     }
 
+    public IReadOnlySet<string> GetDefaultAllowedHosts()
+    {
+        return DefaultHosts;
+    }
+
     public WorkspacePolicy WithDefaultAllowlist(string workspaceId, IReadOnlyList<PathGrant> pathGrants)
     {
         return new WorkspacePolicy(workspaceId, pathGrants, new NetworkAllowlist(DefaultHosts));

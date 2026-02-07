@@ -6,4 +6,5 @@ public interface IHistoryRepository
 {
     Task AddEntryAsync(ConversationEntry entry, CancellationToken cancellationToken);
     Task<IReadOnlyList<ConversationEntry>> GetEntriesAsync(string workspaceId, CancellationToken cancellationToken);
+    Task ClearEntriesAsync(string workspaceId, CancellationToken cancellationToken);
 }

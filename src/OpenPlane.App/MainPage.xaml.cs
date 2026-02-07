@@ -87,6 +87,27 @@ public partial class MainPage : ContentPage
         await ExecuteUiActionAsync(token => viewModel.ApplyDefaultAllowlistAsync(token), "Apply Default Allowlist Error");
     }
 
+    private async void OnSaveConnectorClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.SaveConnectorAsync(token), "Save Connector Error");
+    }
+
+    private async void OnConnectConnectorClicked(object sender, EventArgs e)
+    {
+        if (sender is Button { CommandParameter: string connectorName })
+        {
+            await ExecuteUiActionAsync(token => viewModel.ConnectConnectorAsync(connectorName, token), "Connect Connector Error");
+        }
+    }
+
+    private async void OnDisconnectConnectorClicked(object sender, EventArgs e)
+    {
+        if (sender is Button { CommandParameter: string connectorName })
+        {
+            await ExecuteUiActionAsync(token => viewModel.DisconnectConnectorAsync(connectorName, token), "Disconnect Connector Error");
+        }
+    }
+
     private async void OnLoginClicked(object sender, EventArgs e)
     {
         await ExecuteUiActionAsync(token => viewModel.LoginAsync(token), "Login Error");
@@ -140,6 +161,16 @@ public partial class MainPage : ContentPage
     private async void OnStopClicked(object sender, EventArgs e)
     {
         await viewModel.StopAsync();
+    }
+
+    private async void OnClearSessionClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.ClearSessionAsync(token), "Clear Session Error");
+    }
+
+    private async void OnExportDiagnosticsClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.ExportDiagnosticsAsync(token), "Export Diagnostics Error");
     }
 
     private async Task ExecuteUiActionAsync(

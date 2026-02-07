@@ -71,6 +71,33 @@
 
                     <Frame Padding="12" BorderColor="LightGray">
                         <VerticalStackLayout Spacing="8">
+                            <Label Text="MCP Connectors" FontAttributes="Bold" />
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <Entry Grid.Column="0" Text="{Binding NewConnectorName}" Placeholder="connector-name" />
+                                <Entry Grid.Column="1" Text="{Binding NewConnectorCommand}" Placeholder="command (e.g. npx @playwright/mcp@latest)" />
+                            </Grid>
+                            <Button Text="Save Connector" Clicked="OnSaveConnectorClicked" HorizontalOptions="Start" />
+                            <CollectionView ItemsSource="{Binding ConnectorStatuses}" HeightRequest="140">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <VerticalStackLayout Spacing="4" Margin="0,0,0,8">
+                                            <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                            <Label Text="{Binding Command}" LineBreakMode="MiddleTruncation" />
+                                            <Label Text="{Binding Status}" />
+                                            <Label Text="{Binding LastError}" IsVisible="{Binding LastError}" LineBreakMode="WordWrap" />
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Button Text="Connect" Clicked="OnConnectConnectorClicked" CommandParameter="{Binding Name}" />
+                                                <Button Text="Disconnect" Clicked="OnDisconnectConnectorClicked" CommandParameter="{Binding Name}" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="12" BorderColor="LightGray">
+                        <VerticalStackLayout Spacing="8">
                             <Label Text="Execution" FontAttributes="Bold" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                 <Picker Grid.Column="0" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" />
@@ -90,6 +117,7 @@
                             <HorizontalStackLayout Spacing="8">
                                 <Button Text="Run" Clicked="OnRunClicked" IsEnabled="{Binding CanRun}" HorizontalOptions="Start" />
                                 <Button Text="Stop" Clicked="OnStopClicked" IsEnabled="{Binding CanStop}" HorizontalOptions="Start" />
+                                <Button Text="Clear Session" Clicked="OnClearSessionClicked" HorizontalOptions="Start" />
                             </HorizontalStackLayout>
                         </VerticalStackLayout>
                     </Frame>
@@ -107,6 +135,7 @@
                             <HorizontalStackLayout Spacing="8">
                                 <Button Text="Refresh Auth" Clicked="OnRefreshAuthClicked" HorizontalOptions="Start" />
                                 <Button Text="Login" Clicked="OnLoginClicked" HorizontalOptions="Start" />
+                                <Button Text="Export Logs" Clicked="OnExportDiagnosticsClicked" HorizontalOptions="Start" />
                             </HorizontalStackLayout>
                         </VerticalStackLayout>
                     </Frame>

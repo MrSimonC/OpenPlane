@@ -22,15 +22,21 @@ public sealed class CopilotAuthService : ICopilotAuthService
 {
     private readonly ICopilotClientOptionsFactory optionsFactory;
     private readonly ICopilotExecutionSettingsStore settingsStore;
+    private readonly INetworkPolicyGuard networkPolicyGuard;
 
-    public CopilotAuthService(ICopilotClientOptionsFactory optionsFactory, ICopilotExecutionSettingsStore settingsStore)
+    public CopilotAuthService(
+        ICopilotClientOptionsFactory optionsFactory,
+        ICopilotExecutionSettingsStore settingsStore,
+        INetworkPolicyGuard networkPolicyGuard)
     {
         this.optionsFactory = optionsFactory;
         this.settingsStore = settingsStore;
+        this.networkPolicyGuard = networkPolicyGuard;
     }
 
     public async Task<CopilotAuthState> GetAuthStateAsync(CancellationToken cancellationToken)
     {
+        await networkPolicyGuard.EnsureDefaultCopilotHostsAllowedAsync(cancellationToken);
         var settings = await settingsStore.LoadAsync(cancellationToken);
 
         try
@@ -50,6 +56,7 @@ public sealed class CopilotAuthService : ICopilotAuthService
 
     public async Task<CopilotLoginResult> LoginAsync(CancellationToken cancellationToken)
     {
+        await networkPolicyGuard.EnsureDefaultCopilotHostsAllowedAsync(cancellationToken);
         var settings = await settingsStore.LoadAsync(cancellationToken);
 
         if (string.IsNullOrWhiteSpace(optionsFactory.ResolvedCliPath))

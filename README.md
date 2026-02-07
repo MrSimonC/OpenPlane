@@ -24,6 +24,18 @@ OpenPlane is a .NET MAUI desktop app (macOS + Windows) that uses GitHub Copilot 
   - approve plan
   - run approved plan
   - resume latest run from persisted run state
+- Worker execution boundary:
+  - step execution is routed through `OpenPlane.AgentHost` over stdio JSON IPC
+- MCP connectors:
+  - persisted connector definitions (name/command/scopes)
+  - connect/disconnect/status from UI
+  - worker tool commands: `tool:mcp:list`, `tool:mcp:connect|<name>`, `tool:mcp:disconnect|<name>`
+- File adapters:
+  - text-native read/write for common source/text formats
+  - extract-only behavior for complex/binary formats with explicit write limitations
+- Diagnostics:
+  - opt-in structured local logs (`OPENPLANE_ENABLE_LOCAL_LOGS=1`)
+  - in-app diagnostics export
 - Workspace network allowlist controls:
   - add/remove allowed hosts
   - apply default Copilot/GitHub allowlist preset

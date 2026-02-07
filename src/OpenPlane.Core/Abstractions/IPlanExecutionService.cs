@@ -4,6 +4,7 @@ namespace OpenPlane.Core.Abstractions;
 
 public interface IPlanExecutionService
 {
+    Task<int> RecoverRunningRunsAsync(CancellationToken cancellationToken);
     Task<ExecutionPlan> CreatePlanAsync(string workspaceId, string prompt, CancellationToken cancellationToken);
     Task<ExecutionPlan?> GetLatestPlanAsync(string workspaceId, CancellationToken cancellationToken);
     Task<ExecutionPlan> ApproveLatestPlanAsync(string workspaceId, CancellationToken cancellationToken);

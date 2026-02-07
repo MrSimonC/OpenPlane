@@ -4,22 +4,28 @@ namespace OpenPlane.App.Services;
 
 public interface ICopilotExecutionService
 {
-    Task<string> ExecutePromptAsync(string prompt, string model, CancellationToken cancellationToken);
+    Task<string> ExecutePromptAsync(string prompt, string model, IReadOnlyList<string>? attachmentPaths, CancellationToken cancellationToken);
 }
 
 public sealed class CopilotExecutionService : ICopilotExecutionService
 {
     private readonly ICopilotClientOptionsFactory optionsFactory;
     private readonly ICopilotExecutionSettingsStore settingsStore;
+    private readonly INetworkPolicyGuard networkPolicyGuard;
 
-    public CopilotExecutionService(ICopilotClientOptionsFactory optionsFactory, ICopilotExecutionSettingsStore settingsStore)
+    public CopilotExecutionService(
+        ICopilotClientOptionsFactory optionsFactory,
+        ICopilotExecutionSettingsStore settingsStore,
+        INetworkPolicyGuard networkPolicyGuard)
     {
         this.optionsFactory = optionsFactory;
         this.settingsStore = settingsStore;
+        this.networkPolicyGuard = networkPolicyGuard;
     }
 
-    public async Task<string> ExecutePromptAsync(string prompt, string model, CancellationToken cancellationToken)
+    public async Task<string> ExecutePromptAsync(string prompt, string model, IReadOnlyList<string>? attachmentPaths, CancellationToken cancellationToken)
     {
+        await networkPolicyGuard.EnsureDefaultCopilotHostsAllowedAsync(cancellationToken);
         var settings = await settingsStore.LoadAsync(cancellationToken);
         await using var client = new CopilotClient(optionsFactory.Create(settings));
 
@@ -46,6 +52,7 @@ public sealed class CopilotExecutionService : ICopilotExecutionService
             {
                 case AssistantMessageEvent messageEvent when !string.IsNullOrWhiteSpace(messageEvent.Data.Content):
                     latestAssistantMessage = messageEvent.Data.Content;
+                    completionSource.TrySetResult(latestAssistantMessage);
                     break;
                 case SessionErrorEvent errorEvent:
                     completionSource.TrySetException(new InvalidOperationException(errorEvent.Data.Message));
@@ -74,7 +81,24 @@ public sealed class CopilotExecutionService : ICopilotExecutionService
             });
         });
 
-        await session.SendAsync(new MessageOptions { Prompt = prompt });
+        var messageOptions = new MessageOptions { Prompt = prompt };
+        if (attachmentPaths is { Count: > 0 })
+        {
+            messageOptions.Attachments = attachmentPaths
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(Path.GetFullPath)
+                .Where(File.Exists)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(path => (UserMessageDataAttachmentsItem)new UserMessageDataAttachmentsItemFile
+                {
+                    Type = "file",
+                    Path = path,
+                    DisplayName = Path.GetFileName(path)
+                })
+                .ToList();
+        }
+
+        await session.SendAsync(messageOptions);
         var output = await completionSource.Task.WaitAsync(cancellationToken);
 
         return string.IsNullOrWhiteSpace(output) ? "No assistant output received." : output.Trim();
