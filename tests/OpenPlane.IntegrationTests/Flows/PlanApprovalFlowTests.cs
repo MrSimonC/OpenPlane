@@ -1,0 +1,27 @@
+using OpenPlane.Core.Models;
+using OpenPlane.Core.Services;
+
+namespace OpenPlane.IntegrationTests.Flows;
+
+public sealed class PlanApprovalFlowTests
+{
+    [Fact]
+    public async Task ApprovedPlan_ProducesTerminalRunCompleted()
+    {
+        var planner = new PlannerService();
+        var approval = new ApprovalService();
+        var orchestrator = new RunOrchestrator(new InlineAgentExecutor(), approval);
+
+        var plan = await planner.CreatePlanAsync("Create and validate changes", CancellationToken.None);
+        var approved = await approval.ApproveAsync(plan, CancellationToken.None);
+
+        RunEvent? lastEvent = null;
+        await foreach (var runEvent in orchestrator.ExecuteAsync(approved, CancellationToken.None))
+        {
+            lastEvent = runEvent;
+        }
+
+        Assert.NotNull(lastEvent);
+        Assert.Equal(RunEventType.RunCompleted, lastEvent!.EventType);
+    }
+}
