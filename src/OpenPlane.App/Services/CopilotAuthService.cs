@@ -43,9 +43,7 @@ public sealed class CopilotAuthService : ICopilotAuthService
         }
         catch (Exception ex)
         {
-            var location = settings.Mode == CopilotExecutionMode.ExternalCopilotEndpoint
-                ? settings.ExternalCliUrl ?? "(missing external endpoint URL)"
-                : optionsFactory.DisplayCommand;
+            var location = optionsFactory.DisplayCommand;
             return new CopilotAuthState(false, null, null, $"{ex.Message} ({location})");
         }
     }
@@ -53,15 +51,6 @@ public sealed class CopilotAuthService : ICopilotAuthService
     public async Task<CopilotLoginResult> LoginAsync(CancellationToken cancellationToken)
     {
         var settings = await settingsStore.LoadAsync(cancellationToken);
-        if (settings.Mode == CopilotExecutionMode.ExternalCopilotEndpoint)
-        {
-            return new CopilotLoginResult(
-                false,
-                "Login is unavailable in External Copilot endpoint mode. Authenticate against the external endpoint process directly.",
-                null,
-                null,
-                null);
-        }
 
         if (string.IsNullOrWhiteSpace(optionsFactory.ResolvedCliPath))
         {

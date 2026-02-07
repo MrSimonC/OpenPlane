@@ -17,9 +17,7 @@ public sealed class MainPageViewModel(
     IFileToolService fileToolService,
     ICopilotAuthService authService,
     ICopilotExecutionService executionService,
-    ICopilotExecutionSettingsStore executionSettingsStore,
-    ICopilotHealthService healthService,
-    ICopilotClientOptionsFactory optionsFactory) : INotifyPropertyChanged
+    ICopilotHealthService healthService) : INotifyPropertyChanged
 {
     private const string WorkspaceId = "default";
     private string prompt = "What is 2 + 2?";
@@ -27,8 +25,6 @@ public sealed class MainPageViewModel(
     private bool isAuthenticated;
     private string authStatus = "Checking Copilot login status...";
     private bool isBusy;
-    private string selectedExecutionMode = "Embedded CLI process";
-    private string externalEndpointUrl = string.Empty;
     private string effectiveConnection = string.Empty;
     private string cliVersion = "n/a";
     private string lastStartupError = "None";
@@ -44,12 +40,6 @@ public sealed class MainPageViewModel(
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<string> Models { get; } = [];
-
-    public ObservableCollection<string> ExecutionModeOptions { get; } =
-    [
-        "Embedded CLI process",
-        "External Copilot endpoint"
-    ];
 
     public ObservableCollection<string> Timeline { get; } = [];
     public ObservableCollection<string> GrantedFolders { get; } = [];
@@ -71,27 +61,6 @@ public sealed class MainPageViewModel(
         get => selectedModel;
         set => SetProperty(ref selectedModel, value);
     }
-
-    public string SelectedExecutionMode
-    {
-        get => selectedExecutionMode;
-        set
-        {
-            if (SetProperty(ref selectedExecutionMode, value))
-            {
-                OnPropertyChanged(nameof(IsExternalEndpointMode));
-            }
-        }
-    }
-
-    public string ExternalEndpointUrl
-    {
-        get => externalEndpointUrl;
-        set => SetProperty(ref externalEndpointUrl, value);
-    }
-
-    public bool IsExternalEndpointMode =>
-        string.Equals(SelectedExecutionMode, "External Copilot endpoint", StringComparison.OrdinalIgnoreCase);
 
     public string NewGrantPath
     {
@@ -207,7 +176,6 @@ public sealed class MainPageViewModel(
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
         await LoadWorkspacePolicyAsync(cancellationToken);
-        await LoadExecutionSettingsAsync(cancellationToken);
         await RunHealthChecksAsync(cancellationToken);
         await LoadModelsAsync(cancellationToken);
         await RefreshAuthStatusAsync(cancellationToken);
@@ -281,23 +249,6 @@ public sealed class MainPageViewModel(
     {
         await modelCatalogService.SaveModelSelectionAsync(new ModelSelection(WorkspaceId, SelectedModel), cancellationToken);
         AddTimeline($"Model saved: {SelectedModel}");
-    }
-
-    public async Task SaveExecutionSettingsAsync(CancellationToken cancellationToken)
-    {
-        var mode = IsExternalEndpointMode
-            ? CopilotExecutionMode.ExternalCopilotEndpoint
-            : CopilotExecutionMode.EmbeddedCliProcess;
-
-        var settings = new CopilotExecutionSettings(
-            mode,
-            string.IsNullOrWhiteSpace(ExternalEndpointUrl) ? null : ExternalEndpointUrl.Trim());
-
-        await executionSettingsStore.SaveAsync(settings, cancellationToken);
-        AddTimeline($"Execution mode saved: {SelectedExecutionMode}");
-
-        await RunHealthChecksAsync(cancellationToken);
-        await RefreshAuthStatusAsync(cancellationToken);
     }
 
     public async Task RefreshAuthStatusAsync(CancellationToken cancellationToken)
@@ -539,22 +490,11 @@ public sealed class MainPageViewModel(
         }
     }
 
-    private async Task LoadExecutionSettingsAsync(CancellationToken cancellationToken)
-    {
-        var settings = await executionSettingsStore.LoadAsync(cancellationToken);
-        SelectedExecutionMode = settings.Mode == CopilotExecutionMode.ExternalCopilotEndpoint
-            ? "External Copilot endpoint"
-            : "Embedded CLI process";
-        ExternalEndpointUrl = settings.ExternalCliUrl ?? string.Empty;
-    }
-
     private async Task RunHealthChecksAsync(CancellationToken cancellationToken)
     {
         var report = await healthService.CheckAsync(cancellationToken);
 
-        EffectiveConnection = report.ExecutionMode == "Embedded CLI process"
-            ? optionsFactory.DisplayCommand
-            : report.EffectiveCommand;
+        EffectiveConnection = report.EffectiveCommand;
 
         CliVersion = string.IsNullOrWhiteSpace(report.CliVersion) ? "n/a" : report.CliVersion;
         ModelProbeStatus = report.ModelProbeSucceeded ? "OK" : "Failed";

@@ -17,15 +17,16 @@ Build a desktop-first (.NET MAUI on macOS + Windows) Copilot-SDK-powered coworki
 - Copilot SDK integrated (`GitHub.Copilot.SDK`) with real prompt execution path.
 - CLI path resolution logic added for Copilot CLI invocation and NVM/node-host fallback logic.
 - Unit and integration tests added for core policy/orchestration/model behavior.
+- Execution cancellation support added in app UI/runtime (`Stop` button + in-flight cancellation propagation).
 
 ## Known Gaps / Issues to Resolve
 1. MacCatalyst process execution remains fragile for spawning external CLI in-app; depending on host setup/policy, `Operation not permitted` can still occur.
 2. Execution pipeline currently supports prompt->response, but not full autonomous multi-step coding operations with durable run engine semantics.
-3. Folder grant policy UI and runtime enforcement are not yet wired end-to-end in agent execution tools.
+3. Workspace support is still single-workspace (`default`) and does not yet include multi-workspace management UX.
 4. Network allowlist policy is modeled but not fully enforced across all outbound channels.
 5. MCP implementation is currently in-memory/scaffold level, not fully dynamic/process-managed.
 6. File-type adapter support is still minimal.
-7. Auth UX is basic and needs robust states, recovery, and diagnostics.
+7. Plan/approve/resume lifecycle is not yet fully persisted and user-driven in the UI.
 
 ## Implementation Principles
 - Keep `gpt-5-mini` as default model, with runtime discovery + user override.
@@ -40,21 +41,21 @@ Build a desktop-first (.NET MAUI on macOS + Windows) Copilot-SDK-powered coworki
 Goal: make Copilot execution reliable on macOS and Windows.
 
 Tasks:
-- Add `Execution Mode` setting:
+- [x] Add `Execution Mode` setting:
   - `Embedded CLI process` (current)
   - `External Copilot endpoint` (connect to already-running service via `CliUrl`)
-- Add robust auth diagnostics panel:
+- [x] Add robust auth diagnostics panel:
   - effective CLI command/path
   - auth status details
   - last startup error
-- Implement fallback auth flow:
+- [x] Implement fallback auth flow:
   - in-app login attempt
   - capture device-flow login output and parse `user code` + verification URL
   - show device code in dedicated UI field with one-click `Copy Code` action
   - show `Open Verification Page` action to launch the browser URL directly
   - keep device code visible until auth state changes or user dismisses
   - clear terminal command guidance when blocked
-- Add app startup health checks:
+- [x] Add app startup health checks:
   - CLI executable accessibility
   - version detection
   - model list probe
@@ -72,17 +73,17 @@ Acceptance:
 Goal: implement real scoped local access controls.
 
 Tasks:
-- Add workspace model and settings UI:
+- [~] Add workspace model and settings UI:
   - workspace list
   - granted folders list/add/remove
-- Wire `IAccessPolicyService` to all file operations.
-- Implement file tools in execution layer:
+- [x] Wire `IAccessPolicyService` to all file operations.
+- [x] Implement file tools in execution layer:
   - read file
   - search files
   - write/patch file
   - create file/folder
-- Ensure canonical path checks and traversal prevention.
-- Add policy violation event types and timeline reporting.
+- [x] Ensure canonical path checks and traversal prevention.
+- [x] Add policy violation event types and timeline reporting.
 
 Deliverables:
 - End-to-end scoped file access in runtime behavior.
@@ -95,11 +96,11 @@ Acceptance:
 Goal: restore full cowork workflow over real operations.
 
 Tasks:
-- Add plan generation using model-assisted step decomposition.
-- Reintroduce plan approval gate (configurable strictness).
-- Persist run sessions and steps (status transitions).
-- Implement resumable multi-step execution loop.
-- Stream structured run events to timeline.
+- [ ] Add plan generation using model-assisted step decomposition.
+- [ ] Reintroduce plan approval gate (configurable strictness).
+- [ ] Persist run sessions and steps (status transitions).
+- [ ] Implement resumable multi-step execution loop.
+- [ ] Stream structured run events to timeline.
 
 Deliverables:
 - Plan->approve->execute lifecycle with persistence.

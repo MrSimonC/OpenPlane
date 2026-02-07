@@ -51,11 +51,6 @@ public partial class MainPage : ContentPage
         }
     }
 
-    private async void OnSaveExecutionSettingsClicked(object sender, EventArgs e)
-    {
-        await ExecuteUiActionAsync(token => viewModel.SaveExecutionSettingsAsync(token), "Save Settings Error");
-    }
-
     private async void OnLoginClicked(object sender, EventArgs e)
     {
         await ExecuteUiActionAsync(token => viewModel.LoginAsync(token), "Login Error");

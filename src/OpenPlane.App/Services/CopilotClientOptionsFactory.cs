@@ -31,16 +31,6 @@ public sealed class CopilotClientOptionsFactory : ICopilotClientOptionsFactory
 
     public CopilotClientOptions Create(CopilotExecutionSettings settings)
     {
-        if (settings.Mode == CopilotExecutionMode.ExternalCopilotEndpoint &&
-            !string.IsNullOrWhiteSpace(settings.ExternalCliUrl))
-        {
-            return new CopilotClientOptions
-            {
-                AutoStart = false,
-                CliUrl = settings.ExternalCliUrl
-            };
-        }
-
         if (string.IsNullOrWhiteSpace(resolvedCliPath))
         {
             throw new InvalidOperationException(

@@ -22,21 +22,13 @@ public sealed class CopilotHealthService(
     public async Task<CopilotHealthReport> CheckAsync(CancellationToken cancellationToken)
     {
         var settings = await settingsStore.LoadAsync(cancellationToken);
-        var executionMode = settings.Mode == CopilotExecutionMode.ExternalCopilotEndpoint
-            ? "External Copilot endpoint"
-            : "Embedded CLI process";
-
-        var command = settings.Mode == CopilotExecutionMode.ExternalCopilotEndpoint
-            ? settings.ExternalCliUrl ?? "(missing endpoint URL)"
-            : optionsFactory.DisplayCommand;
+        var executionMode = "Embedded CLI process";
+        var command = optionsFactory.DisplayCommand;
 
         string? cliVersion = null;
         string? startupError = null;
 
-        if (settings.Mode == CopilotExecutionMode.EmbeddedCliProcess)
-        {
-            (cliVersion, startupError) = await TryGetCliVersionAsync(cancellationToken);
-        }
+        (cliVersion, startupError) = await TryGetCliVersionAsync(cancellationToken);
 
         var modelProbeSucceeded = false;
         try

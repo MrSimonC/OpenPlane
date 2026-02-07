@@ -13,11 +13,7 @@
                     <Frame Padding="12" BorderColor="LightGray">
                         <VerticalStackLayout Spacing="8">
                             <Label Text="Execution Mode" FontAttributes="Bold" />
-                            <Picker ItemsSource="{Binding ExecutionModeOptions}" SelectedItem="{Binding SelectedExecutionMode}" />
-                            <Entry Text="{Binding ExternalEndpointUrl}"
-                                   Placeholder="localhost:8080"
-                                   IsVisible="{Binding IsExternalEndpointMode}" />
-                            <Button Text="Save Execution Settings" Clicked="OnSaveExecutionSettingsClicked" HorizontalOptions="Start" />
+                            <Label Text="Embedded CLI process (bundled Copilot CLI only)" />
                         </VerticalStackLayout>
                     </Frame>
 

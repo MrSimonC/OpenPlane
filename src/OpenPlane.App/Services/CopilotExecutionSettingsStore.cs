@@ -2,17 +2,9 @@ using System.Text.Json;
 
 namespace OpenPlane.App.Services;
 
-public enum CopilotExecutionMode
+public sealed record CopilotExecutionSettings
 {
-    EmbeddedCliProcess,
-    ExternalCopilotEndpoint
-}
-
-public sealed record CopilotExecutionSettings(
-    CopilotExecutionMode Mode,
-    string? ExternalCliUrl)
-{
-    public static CopilotExecutionSettings Default { get; } = new(CopilotExecutionMode.EmbeddedCliProcess, null);
+    public static CopilotExecutionSettings Default { get; } = new();
 }
 
 public interface ICopilotExecutionSettingsStore
