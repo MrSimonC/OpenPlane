@@ -22,8 +22,10 @@ public enum RunEventType
 
 public sealed record RunSession(
     string RunId,
+    string WorkspaceId,
     string PlanId,
     RunStatus Status,
+    int NextStepIndex,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? CompletedAtUtc,
     string? FailureReason);

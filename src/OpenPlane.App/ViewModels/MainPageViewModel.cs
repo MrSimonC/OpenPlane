@@ -17,6 +17,7 @@ public sealed class MainPageViewModel(
     IFileToolService fileToolService,
     ICopilotAuthService authService,
     ICopilotExecutionService executionService,
+    IPlanExecutionService planExecutionService,
     IWorkspaceSettingsStore workspaceSettingsStore,
     ICopilotHealthService healthService) : INotifyPropertyChanged
 {
@@ -34,8 +35,12 @@ public sealed class MainPageViewModel(
     private string verificationUrl = string.Empty;
     private string manualCommandGuidance = string.Empty;
     private string newGrantPath = string.Empty;
+    private string newAllowedHost = string.Empty;
     private string selectedWorkspaceId = DefaultWorkspaceId;
     private string newWorkspaceId = string.Empty;
+    private string currentPlanSummary = "No plan created.";
+    private bool isCurrentPlanApproved;
+    private string latestRunStatus = "No run session.";
     private bool canStop;
     private CancellationTokenSource? activeOperationCts;
     private string? activeOperationName;
@@ -46,6 +51,7 @@ public sealed class MainPageViewModel(
 
     public ObservableCollection<string> Timeline { get; } = [];
     public ObservableCollection<string> GrantedFolders { get; } = [];
+    public ObservableCollection<string> AllowedHosts { get; } = [];
     public ObservableCollection<string> Workspaces { get; } = [];
 
     public string Prompt
@@ -82,6 +88,37 @@ public sealed class MainPageViewModel(
     {
         get => newWorkspaceId;
         set => SetProperty(ref newWorkspaceId, value);
+    }
+
+    public string NewAllowedHost
+    {
+        get => newAllowedHost;
+        set => SetProperty(ref newAllowedHost, value);
+    }
+
+    public string CurrentPlanSummary
+    {
+        get => currentPlanSummary;
+        private set => SetProperty(ref currentPlanSummary, value);
+    }
+
+    public bool IsCurrentPlanApproved
+    {
+        get => isCurrentPlanApproved;
+        private set
+        {
+            if (SetProperty(ref isCurrentPlanApproved, value))
+            {
+                OnPropertyChanged(nameof(CanApprovePlan));
+                OnPropertyChanged(nameof(CanExecutePlan));
+            }
+        }
+    }
+
+    public string LatestRunStatus
+    {
+        get => latestRunStatus;
+        private set => SetProperty(ref latestRunStatus, value);
     }
 
     public bool IsAuthenticated
@@ -188,6 +225,8 @@ public sealed class MainPageViewModel(
     }
 
     public bool CanRun => IsAuthenticated && !IsBusy && !string.IsNullOrWhiteSpace(Prompt);
+    public bool CanApprovePlan => !IsBusy && !IsCurrentPlanApproved;
+    public bool CanExecutePlan => !IsBusy && IsCurrentPlanApproved;
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
@@ -195,6 +234,7 @@ public sealed class MainPageViewModel(
         await LoadWorkspacePolicyAsync(cancellationToken);
         await RunHealthChecksAsync(cancellationToken);
         await LoadModelsAsync(cancellationToken);
+        await RefreshPlanStateAsync(cancellationToken);
         await RefreshAuthStatusAsync(cancellationToken);
     }
 
@@ -257,7 +297,90 @@ public sealed class MainPageViewModel(
         await SaveWorkspaceSettingsAsync(cancellationToken);
         await LoadWorkspacePolicyAsync(cancellationToken);
         await LoadModelsAsync(cancellationToken);
+        await RefreshPlanStateAsync(cancellationToken);
         AddTimeline($"Switched workspace: {SelectedWorkspaceId}");
+    }
+
+    public async Task CreatePlanAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(Prompt))
+        {
+            AddTimeline("Plan creation blocked: prompt is empty.");
+            return;
+        }
+
+        var plan = await planExecutionService.CreatePlanAsync(SelectedWorkspaceId, Prompt, cancellationToken);
+        await RefreshPlanStateAsync(cancellationToken);
+        AddTimeline($"Plan created with {plan.Steps.Count} steps.");
+    }
+
+    public async Task ApprovePlanAsync(CancellationToken cancellationToken)
+    {
+        var approved = await planExecutionService.ApproveLatestPlanAsync(SelectedWorkspaceId, cancellationToken);
+        await RefreshPlanStateAsync(cancellationToken);
+        AddTimeline($"Plan approved ({approved.PlanId}).");
+    }
+
+    public async Task ExecutePlanAsync(CancellationToken cancellationToken)
+    {
+        if (!TryBeginOperation("plan execution", cancellationToken, out var operationToken, out var operationCts))
+        {
+            AddTimeline($"Operation in progress: {activeOperationName}.");
+            return;
+        }
+
+        try
+        {
+            await foreach (var evt in planExecutionService.ExecuteLatestApprovedPlanAsync(SelectedWorkspaceId, operationToken))
+            {
+                AddTimeline(FormatRunEvent(evt));
+            }
+
+            await RefreshPlanStateAsync(operationToken);
+        }
+        catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
+        {
+            AddTimeline("[Cancelled] Plan execution cancelled.");
+        }
+        catch (Exception ex)
+        {
+            AddTimeline($"[PlanExecutionFailed] {ex.Message}");
+        }
+        finally
+        {
+            EndOperation(operationCts);
+        }
+    }
+
+    public async Task ResumeRunAsync(CancellationToken cancellationToken)
+    {
+        if (!TryBeginOperation("plan resume", cancellationToken, out var operationToken, out var operationCts))
+        {
+            AddTimeline($"Operation in progress: {activeOperationName}.");
+            return;
+        }
+
+        try
+        {
+            await foreach (var evt in planExecutionService.ResumeLatestRunAsync(SelectedWorkspaceId, operationToken))
+            {
+                AddTimeline(FormatRunEvent(evt));
+            }
+
+            await RefreshPlanStateAsync(operationToken);
+        }
+        catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
+        {
+            AddTimeline("[Cancelled] Plan resume cancelled.");
+        }
+        catch (Exception ex)
+        {
+            AddTimeline($"[PlanResumeFailed] {ex.Message}");
+        }
+        finally
+        {
+            EndOperation(operationCts);
+        }
     }
 
     public async Task AddFolderGrantAsync(CancellationToken cancellationToken)
@@ -322,6 +445,62 @@ public sealed class MainPageViewModel(
         await workspacePolicyStore.SaveAsync(current with { PathGrants = filtered }, cancellationToken);
         await LoadWorkspacePolicyAsync(cancellationToken);
         AddTimeline($"Removed grant: {fullPath}");
+    }
+
+    public async Task AddAllowedHostAsync(CancellationToken cancellationToken)
+    {
+        var host = NormalizeHost(NewAllowedHost);
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            AddTimeline("Allowed host is empty.");
+            return;
+        }
+
+        var policy = await workspacePolicyStore.GetAsync(SelectedWorkspaceId, cancellationToken);
+        if (policy.NetworkAllowlist.AllowedHosts.Contains(host))
+        {
+            AddTimeline($"Host already allowed: {host}");
+            return;
+        }
+
+        var updatedHosts = new HashSet<string>(policy.NetworkAllowlist.AllowedHosts, StringComparer.OrdinalIgnoreCase)
+        {
+            host
+        };
+
+        await workspacePolicyStore.SaveAsync(policy with { NetworkAllowlist = new NetworkAllowlist(updatedHosts) }, cancellationToken);
+        NewAllowedHost = string.Empty;
+        await LoadWorkspacePolicyAsync(cancellationToken);
+        AddTimeline($"Added allowed host: {host}");
+    }
+
+    public async Task RemoveAllowedHostAsync(string host, CancellationToken cancellationToken)
+    {
+        var normalized = NormalizeHost(host);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        var policy = await workspacePolicyStore.GetAsync(SelectedWorkspaceId, cancellationToken);
+        var updatedHosts = new HashSet<string>(policy.NetworkAllowlist.AllowedHosts, StringComparer.OrdinalIgnoreCase);
+        if (!updatedHosts.Remove(normalized))
+        {
+            return;
+        }
+
+        await workspacePolicyStore.SaveAsync(policy with { NetworkAllowlist = new NetworkAllowlist(updatedHosts) }, cancellationToken);
+        await LoadWorkspacePolicyAsync(cancellationToken);
+        AddTimeline($"Removed allowed host: {normalized}");
+    }
+
+    public async Task ApplyDefaultAllowlistAsync(CancellationToken cancellationToken)
+    {
+        var policy = await workspacePolicyStore.GetAsync(SelectedWorkspaceId, cancellationToken);
+        var updated = networkPolicyService.WithDefaultAllowlist(SelectedWorkspaceId, policy.PathGrants);
+        await workspacePolicyStore.SaveAsync(updated, cancellationToken);
+        await LoadWorkspacePolicyAsync(cancellationToken);
+        AddTimeline("Applied default allowlist for workspace.");
     }
 
     public async Task SaveModelSelectionAsync(CancellationToken cancellationToken)
@@ -567,6 +746,12 @@ public sealed class MainPageViewModel(
         {
             GrantedFolders.Add(path);
         }
+
+        AllowedHosts.Clear();
+        foreach (var host in policy.NetworkAllowlist.AllowedHosts.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            AllowedHosts.Add(host);
+        }
     }
 
     private async Task LoadWorkspaceSettingsAsync(CancellationToken cancellationToken)
@@ -600,6 +785,56 @@ public sealed class MainPageViewModel(
     private static string NormalizeWorkspaceId(string? value)
     {
         return value?.Trim() ?? string.Empty;
+    }
+
+    private static string NormalizeHost(string? host)
+    {
+        return host?.Trim().Trim().Trim('/').ToLowerInvariant() ?? string.Empty;
+    }
+
+    private async Task RefreshPlanStateAsync(CancellationToken cancellationToken)
+    {
+        var plan = await planExecutionService.GetLatestPlanAsync(SelectedWorkspaceId, cancellationToken);
+        if (plan is null)
+        {
+            CurrentPlanSummary = "No plan created.";
+            IsCurrentPlanApproved = false;
+        }
+        else
+        {
+            CurrentPlanSummary = $"Plan {plan.PlanId}: {plan.Steps.Count} steps, risk={plan.RiskLevel}";
+            IsCurrentPlanApproved = plan.IsApproved;
+        }
+
+        var latestRun = await planExecutionService.GetLatestRunAsync(SelectedWorkspaceId, cancellationToken);
+        if (latestRun is null)
+        {
+            LatestRunStatus = "No run session.";
+            return;
+        }
+
+        LatestRunStatus = latestRun.Status switch
+        {
+            RunStatus.Completed => $"Run {latestRun.RunId}: completed",
+            RunStatus.Failed => $"Run {latestRun.RunId}: failed ({latestRun.FailureReason ?? "unknown"})",
+            RunStatus.Running => $"Run {latestRun.RunId}: running (next step {latestRun.NextStepIndex + 1})",
+            _ => $"Run {latestRun.RunId}: {latestRun.Status}"
+        };
+    }
+
+    private static string FormatRunEvent(RunEvent evt)
+    {
+        return evt.EventType switch
+        {
+            RunEventType.RunStarted => $"[RunStarted] {evt.Message}",
+            RunEventType.StepStarted => $"[StepStarted:{evt.StepId}] {evt.Message}",
+            RunEventType.StepOutput => $"[StepOutput:{evt.StepId}] {evt.Message}",
+            RunEventType.StepCompleted => $"[StepCompleted:{evt.StepId}] {evt.Message}",
+            RunEventType.PolicyViolation => $"[PolicyViolation:{evt.StepId}] {evt.Message}",
+            RunEventType.RunFailed => $"[RunFailed:{evt.StepId}] {evt.Message}",
+            RunEventType.RunCompleted => $"[RunCompleted] {evt.Message}",
+            _ => $"[{evt.EventType}] {evt.Message}"
+        };
     }
 
     private async Task RunHealthChecksAsync(CancellationToken cancellationToken)

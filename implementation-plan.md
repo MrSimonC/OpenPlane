@@ -23,10 +23,10 @@ Build a desktop-first (.NET MAUI on macOS + Windows) Copilot-SDK-powered coworki
 1. MacCatalyst process execution remains fragile for spawning external CLI in-app; depending on host setup/policy, `Operation not permitted` can still occur.
 2. Execution pipeline currently supports prompt->response, but not full autonomous multi-step coding operations with durable run engine semantics.
 3. Workspace policy UX is implemented, but still lightweight (workspace IDs only; no richer metadata/project detection yet).
-4. Network allowlist policy is modeled but not fully enforced across all outbound channels.
+4. Network allowlist editor is now available per workspace, but enforcement is not yet complete across all outbound channels/SDK traffic.
 5. MCP implementation is currently in-memory/scaffold level, not fully dynamic/process-managed.
 6. File-type adapter support is still minimal.
-7. Plan/approve/resume lifecycle is not yet fully persisted and user-driven in the UI.
+7. Worker isolation boundary and connector/process management remain pending for production hardening.
 
 ## Implementation Principles
 - Keep `gpt-5-mini` as default model, with runtime discovery + user override.
@@ -96,11 +96,11 @@ Acceptance:
 Goal: restore full cowork workflow over real operations.
 
 Tasks:
-- [ ] Add plan generation using model-assisted step decomposition.
-- [ ] Reintroduce plan approval gate (configurable strictness).
-- [ ] Persist run sessions and steps (status transitions).
-- [ ] Implement resumable multi-step execution loop.
-- [ ] Stream structured run events to timeline.
+- [x] Add plan generation using model-assisted step decomposition.
+- [x] Reintroduce plan approval gate (configurable strictness).
+- [x] Persist run sessions and steps (status transitions).
+- [x] Implement resumable multi-step execution loop.
+- [x] Stream structured run events to timeline.
 
 Deliverables:
 - Plan->approve->execute lifecycle with persistence.
@@ -130,10 +130,10 @@ Acceptance:
 Goal: enforce outbound network policy.
 
 Tasks:
-- Add per-workspace allowlist editor UI.
-- Include default preset (`GitHub + Copilot endpoints`).
-- Enforce allowlist in all app/worker HTTP clients.
-- Add explicit deny event reporting.
+- [x] Add per-workspace allowlist editor UI.
+- [x] Include default preset (`GitHub + Copilot endpoints`).
+- [~] Enforce allowlist in all app/worker HTTP clients.
+- [ ] Add explicit deny event reporting.
 
 Deliverables:
 - Effective outbound control with user-managed policy.

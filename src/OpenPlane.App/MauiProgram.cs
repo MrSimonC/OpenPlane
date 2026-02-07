@@ -34,12 +34,15 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ICopilotExecutionService, CopilotExecutionService>();
 		builder.Services.AddSingleton<IModelSelectionStore>(_ => new JsonModelSelectionStore("OpenPlane"));
 		builder.Services.AddSingleton<IWorkspacePolicyStore>(_ => new JsonWorkspacePolicyStore("OpenPlane"));
+		builder.Services.AddSingleton<IExecutionPlanStore>(_ => new JsonExecutionPlanStore("OpenPlane"));
+		builder.Services.AddSingleton<IRunStateStore>(_ => new JsonRunStateStore("OpenPlane"));
 		builder.Services.AddSingleton<EncryptionService>(_ => new EncryptionService("OpenPlane"));
 		builder.Services.AddSingleton<IHistoryRepository>(provider => new EncryptedHistoryRepository(provider.GetRequiredService<EncryptionService>(), "OpenPlane"));
 		builder.Services.AddSingleton<IConnectorRegistry, InMemoryConnectorRegistry>();
 		builder.Services.AddSingleton<IMcpConnectorBroker, InMemoryMcpConnectorBroker>();
 		builder.Services.AddSingleton<IPlannerService, PlannerService>();
 		builder.Services.AddSingleton<IApprovalService, ApprovalService>();
+		builder.Services.AddSingleton<IPlanExecutionService, PlanExecutionService>();
 		builder.Services.AddSingleton<IFileToolService, FileToolService>();
 		builder.Services.AddSingleton<IAgentExecutor, InlineAgentExecutor>();
 		builder.Services.AddSingleton<IRunOrchestrator, RunOrchestrator>();

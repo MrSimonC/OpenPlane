@@ -69,6 +69,24 @@ public partial class MainPage : ContentPage
         }
     }
 
+    private async void OnAddAllowedHostClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.AddAllowedHostAsync(token), "Add Allowed Host Error");
+    }
+
+    private async void OnRemoveAllowedHostClicked(object sender, EventArgs e)
+    {
+        if (sender is Button { CommandParameter: string host })
+        {
+            await ExecuteUiActionAsync(token => viewModel.RemoveAllowedHostAsync(host, token), "Remove Allowed Host Error");
+        }
+    }
+
+    private async void OnApplyDefaultAllowlistClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.ApplyDefaultAllowlistAsync(token), "Apply Default Allowlist Error");
+    }
+
     private async void OnLoginClicked(object sender, EventArgs e)
     {
         await ExecuteUiActionAsync(token => viewModel.LoginAsync(token), "Login Error");
@@ -97,6 +115,26 @@ public partial class MainPage : ContentPage
     private async void OnRunClicked(object sender, EventArgs e)
     {
         await ExecuteUiActionAsync(token => viewModel.RunAsync(token), "Run Error");
+    }
+
+    private async void OnCreatePlanClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.CreatePlanAsync(token), "Create Plan Error");
+    }
+
+    private async void OnApprovePlanClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.ApprovePlanAsync(token), "Approve Plan Error");
+    }
+
+    private async void OnExecutePlanClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.ExecutePlanAsync(token), "Execute Plan Error");
+    }
+
+    private async void OnResumeRunClicked(object sender, EventArgs e)
+    {
+        await ExecuteUiActionAsync(token => viewModel.ResumeRunAsync(token), "Resume Run Error");
     }
 
     private async void OnStopClicked(object sender, EventArgs e)

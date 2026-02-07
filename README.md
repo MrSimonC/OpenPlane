@@ -19,6 +19,14 @@ OpenPlane is a .NET MAUI desktop app (macOS + Windows) that uses GitHub Copilot 
   - add/remove allowed folders
   - local file tools enforce grants
   - blocked operations are surfaced as policy violations
+- Plan execution controls:
+  - create plan from prompt
+  - approve plan
+  - run approved plan
+  - resume latest run from persisted run state
+- Workspace network allowlist controls:
+  - add/remove allowed hosts
+  - apply default Copilot/GitHub allowlist preset
 
 ## 3. Local File Tool Prompt Format
 Use `tool:` prompts to run scoped local file operations:

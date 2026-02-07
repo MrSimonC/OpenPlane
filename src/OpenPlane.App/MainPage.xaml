@@ -47,12 +47,46 @@
 
                     <Frame Padding="12" BorderColor="LightGray">
                         <VerticalStackLayout Spacing="8">
+                            <Label Text="Network Allowlist" FontAttributes="Bold" />
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                <Entry Grid.Column="0" Text="{Binding NewAllowedHost}" Placeholder="api.github.com" />
+                                <Button Grid.Column="1" Text="Add Host" Clicked="OnAddAllowedHostClicked" />
+                                <Button Grid.Column="2" Text="Use Defaults" Clicked="OnApplyDefaultAllowlistClicked" />
+                            </Grid>
+                            <CollectionView ItemsSource="{Binding AllowedHosts}" HeightRequest="120">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Label Text="{Binding .}" VerticalOptions="Center" />
+                                            <Button Text="Remove"
+                                                    Clicked="OnRemoveAllowedHostClicked"
+                                                    CommandParameter="{Binding .}"
+                                                    HorizontalOptions="EndAndExpand" />
+                                        </HorizontalStackLayout>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="12" BorderColor="LightGray">
+                        <VerticalStackLayout Spacing="8">
                             <Label Text="Execution" FontAttributes="Bold" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                 <Picker Grid.Column="0" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" />
                                 <Button Grid.Column="1" Text="Save Model" Clicked="OnSaveModelClicked" HorizontalOptions="End" />
                             </Grid>
                             <Editor Text="{Binding Prompt}" AutoSize="TextChanges" HeightRequest="120" />
+                            <Label Text="{Binding CurrentPlanSummary}" LineBreakMode="WordWrap" />
+                            <Label Text="{Binding LatestRunStatus}" LineBreakMode="WordWrap" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Create Plan" Clicked="OnCreatePlanClicked" HorizontalOptions="Start" />
+                                <Button Text="Approve Plan" Clicked="OnApprovePlanClicked" IsEnabled="{Binding CanApprovePlan}" HorizontalOptions="Start" />
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Run Plan" Clicked="OnExecutePlanClicked" IsEnabled="{Binding CanExecutePlan}" HorizontalOptions="Start" />
+                                <Button Text="Resume Run" Clicked="OnResumeRunClicked" HorizontalOptions="Start" />
+                            </HorizontalStackLayout>
                             <HorizontalStackLayout Spacing="8">
                                 <Button Text="Run" Clicked="OnRunClicked" IsEnabled="{Binding CanRun}" HorizontalOptions="Start" />
                                 <Button Text="Stop" Clicked="OnStopClicked" IsEnabled="{Binding CanStop}" HorizontalOptions="Start" />
