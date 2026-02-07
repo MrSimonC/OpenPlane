@@ -12,13 +12,6 @@
                 <VerticalStackLayout Spacing="12" FlexLayout.Basis="500" FlexLayout.Grow="1" FlexLayout.Shrink="1">
                     <Frame Padding="12" BorderColor="LightGray">
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="Execution Mode" FontAttributes="Bold" />
-                            <Label Text="Embedded CLI process (bundled Copilot CLI only)" />
-                        </VerticalStackLayout>
-                    </Frame>
-
-                    <Frame Padding="12" BorderColor="LightGray">
-                        <VerticalStackLayout Spacing="8">
                             <Label Text="Workspace Grants" FontAttributes="Bold" />
                             <Entry Text="{Binding NewGrantPath}" Placeholder="/absolute/path/to/workspace" />
                             <Button Text="Add Folder Grant" Clicked="OnAddGrantClicked" HorizontalOptions="Start" />
