@@ -1,0 +1,11 @@
+{
+  "name": "GitHub - Codespace - Universal",
+  "features":
+  {
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10.0"
+    },
+    "ghcr.io/devcontainers/features/copilot-cli:1": {}
+  },
+  "postCreateCommand": "npm install -g --yes @openai/codex @google/gemini-cli"
+}
