@@ -32,7 +32,7 @@ public sealed class AccessPolicyService : IAccessPolicyService
             }
 
             var scope = NormalizePath(grant.AbsolutePath);
-            if (candidate.StartsWith(scope, StringComparison.OrdinalIgnoreCase))
+            if (IsWithinScope(candidate, scope))
             {
                 return true;
             }
@@ -43,7 +43,17 @@ public sealed class AccessPolicyService : IAccessPolicyService
 
     private static string NormalizePath(string path)
     {
-        var fullPath = Path.GetFullPath(path);
-        return fullPath.EndsWith(Path.DirectorySeparatorChar) ? fullPath : fullPath + Path.DirectorySeparatorChar;
+        return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+    }
+
+    private static bool IsWithinScope(string candidate, string scope)
+    {
+        if (string.Equals(candidate, scope, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var withSeparator = scope + Path.DirectorySeparatorChar;
+        return candidate.StartsWith(withSeparator, StringComparison.OrdinalIgnoreCase);
     }
 }

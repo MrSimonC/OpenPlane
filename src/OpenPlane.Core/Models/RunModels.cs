@@ -15,6 +15,7 @@ public enum RunEventType
     StepStarted,
     StepOutput,
     StepCompleted,
+    PolicyViolation,
     RunCompleted,
     RunFailed
 }

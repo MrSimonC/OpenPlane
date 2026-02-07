@@ -36,4 +36,20 @@ public sealed class AccessPolicyServiceTests
 
         Assert.False(allowed);
     }
+
+    [Fact]
+    public void CanRead_DoesNotAllowSiblingPrefixPath()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "openplane-tests", Guid.NewGuid().ToString("N"));
+        var granted = Path.Combine(root, "allowed");
+        var sibling = Path.Combine(root, "allowed-sibling", "file.txt");
+        var policy = new WorkspacePolicy(
+            "default",
+            [new PathGrant(granted, AllowRead: true, AllowWrite: false, AllowCreate: false)],
+            new NetworkAllowlist(new HashSet<string>(StringComparer.OrdinalIgnoreCase)));
+
+        var allowed = service.CanRead(sibling, policy);
+
+        Assert.False(allowed);
+    }
 }

@@ -22,14 +22,26 @@ public sealed class RunOrchestrator(IAgentExecutor agentExecutor, IApprovalServi
 
             string output;
             RunEvent? failedEvent = null;
+            RunEvent? policyViolationEvent = null;
             try
             {
                 output = await agentExecutor.ExecuteStepAsync(step, cancellationToken);
+            }
+            catch (PolicyViolationException ex)
+            {
+                policyViolationEvent = new RunEvent(runId, RunEventType.PolicyViolation, ex.Message, DateTimeOffset.UtcNow, step.Id);
+                failedEvent = new RunEvent(runId, RunEventType.RunFailed, "Run failed due to policy violation.", DateTimeOffset.UtcNow, step.Id);
+                output = string.Empty;
             }
             catch (Exception ex)
             {
                 failedEvent = new RunEvent(runId, RunEventType.RunFailed, ex.Message, DateTimeOffset.UtcNow, step.Id);
                 output = string.Empty;
+            }
+
+            if (policyViolationEvent is not null)
+            {
+                yield return policyViolationEvent;
             }
 
             if (failedEvent is not null)

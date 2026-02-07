@@ -1,0 +1,111 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net10.0-maccatalyst</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+
+		<!-- Note for MacCatalyst:
+		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
+		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
+		The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
+		either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
+		<!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
+
+		<OutputType>Exe</OutputType>
+		<RootNamespace>OpenPlane.App</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<!-- Display name -->
+		<ApplicationTitle>OpenPlane.App</ApplicationTitle>
+
+		<!-- App Identifier -->
+		<ApplicationId>com.companyname.openplane.app</ApplicationId>
+
+		<!-- Versions -->
+		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+		<WindowsPackageType>None</WindowsPackageType>
+
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- App Icon -->
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+
+		<!-- Splash Screen -->
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+
+		<!-- Images -->
+		<MauiImage Include="Resources\Images\*" />
+		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+		
+		<!-- Custom Fonts -->
+		<MauiFont Include="Resources\Fonts\*" />
+
+		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="GitHub.Copilot.SDK" Version="0.1.23" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\OpenPlane.Core\OpenPlane.Core.csproj" />
+	  <ProjectReference Include="..\OpenPlane.Storage\OpenPlane.Storage.csproj" />
+	  <ProjectReference Include="..\OpenPlane.Connectors.Mcp\OpenPlane.Connectors.Mcp.csproj" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<_CopilotBundledRid Condition="'$(RuntimeIdentifier)' != '' And $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('maccatalyst-'))">$([System.String]::Copy('$(RuntimeIdentifier)').Replace('maccatalyst-', 'osx-'))</_CopilotBundledRid>
+		<_CopilotBundledRid Condition="'$(_CopilotBundledRid)' == '' And '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_CopilotBundledRid>
+		<_CopilotBundledRid Condition="'$(_CopilotBundledRid)' == '' And '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">osx-arm64</_CopilotBundledRid>
+		<_CopilotBundledRid Condition="'$(_CopilotBundledRid)' == '' And '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">osx-x64</_CopilotBundledRid>
+		<_CopilotBundledPlatform Condition="'$(_CopilotBundledRid)' == 'osx-arm64'">darwin-arm64</_CopilotBundledPlatform>
+		<_CopilotBundledPlatform Condition="'$(_CopilotBundledRid)' == 'osx-x64'">darwin-x64</_CopilotBundledPlatform>
+		<_CopilotBundledCacheDir>$(MSBuildProjectDirectory)/copilot-cli/$(CopilotCliVersion)/$(_CopilotBundledPlatform)</_CopilotBundledCacheDir>
+		<_CopilotBundledCliPath>$(_CopilotBundledCacheDir)/copilot</_CopilotBundledCliPath>
+		<_CopilotBundledArchivePath>$(_CopilotBundledCacheDir)/copilot.tgz</_CopilotBundledArchivePath>
+		<_CopilotBundledDownloadUrl>https://registry.npmjs.org/@github/copilot-$(_CopilotBundledPlatform)/-/copilot-$(_CopilotBundledPlatform)-$(CopilotCliVersion).tgz</_CopilotBundledDownloadUrl>
+		<_CopilotBuildOutputDir>$(MSBuildProjectDirectory)/bin/$(Configuration)/$(TargetFramework)/$(RuntimeIdentifier)</_CopilotBuildOutputDir>
+		<_CopilotBundledOutRuntimeDir>$(_CopilotBuildOutputDir)/runtimes/$(_CopilotBundledRid)/native</_CopilotBundledOutRuntimeDir>
+		<_CopilotBundledAppRuntimeDir>$(_CopilotBuildOutputDir)/$(AssemblyName).app/Contents/MonoBundle/runtimes/$(_CopilotBundledRid)/native</_CopilotBundledAppRuntimeDir>
+	</PropertyGroup>
+
+	<Target Name="_DownloadBundledCopilotCliForMacCatalyst"
+	        BeforeTargets="BeforeBuild"
+	        Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('maccatalyst-')) And '$(_CopilotBundledPlatform)' != '' And '$(CopilotCliVersion)' != ''">
+		<Error Condition="'$(CopilotCliVersion)' == ''" Text="CopilotCliVersion is not set. The GitHub.Copilot.SDK.props file may be missing from the NuGet package." />
+		<Delete Files="$(_CopilotBundledArchivePath)" Condition="!Exists('$(_CopilotBundledCliPath)') And Exists('$(_CopilotBundledArchivePath)')" />
+		<MakeDir Directories="$(_CopilotBundledCacheDir)" Condition="!Exists('$(_CopilotBundledCliPath)')" />
+		<Message Importance="high" Text="Downloading bundled Copilot CLI $(CopilotCliVersion) for $(_CopilotBundledPlatform)..." Condition="!Exists('$(_CopilotBundledCliPath)')" />
+		<DownloadFile SourceUrl="$(_CopilotBundledDownloadUrl)" DestinationFolder="$(_CopilotBundledCacheDir)" DestinationFileName="copilot.tgz"
+		              Condition="!Exists('$(_CopilotBundledCliPath)')" />
+		<Exec Command="tar -xzf &quot;$(_CopilotBundledArchivePath)&quot; --strip-components=1 -C &quot;$(_CopilotBundledCacheDir)&quot;"
+		      Condition="!Exists('$(_CopilotBundledCliPath)')" />
+		<Error Condition="!Exists('$(_CopilotBundledCliPath)')" Text="Failed to extract bundled Copilot CLI to $(_CopilotBundledCliPath)." />
+	</Target>
+
+	<Target Name="_CopyBundledCopilotCliForMacCatalyst"
+	        AfterTargets="Build"
+	        DependsOnTargets="_DownloadBundledCopilotCliForMacCatalyst"
+	        Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('maccatalyst-')) And '$(_CopilotBundledPlatform)' != '' And '$(CopilotCliVersion)' != ''">
+		<Exec Command="mkdir -p &quot;$(_CopilotBundledOutRuntimeDir)&quot;" />
+		<Exec Command="cp -f &quot;$(_CopilotBundledCliPath)&quot; &quot;$(_CopilotBundledOutRuntimeDir)/copilot&quot;" />
+		<Exec Command="chmod +x &quot;$(_CopilotBundledOutRuntimeDir)/copilot&quot;" />
+		<Exec Command="mkdir -p &quot;$(_CopilotBundledAppRuntimeDir)&quot;" />
+		<Exec Command="cp -f &quot;$(_CopilotBundledCliPath)&quot; &quot;$(_CopilotBundledAppRuntimeDir)/copilot&quot;" />
+		<Exec Command="chmod +x &quot;$(_CopilotBundledAppRuntimeDir)/copilot&quot;" />
+	</Target>
+
+</Project>

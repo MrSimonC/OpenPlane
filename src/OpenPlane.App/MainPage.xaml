@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="OpenPlane.App.MainPage"
+             Title="OpenPlane">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Label Text="OpenPlane" FontAttributes="Bold" FontSize="24" />
+            <Label Text="Copilot SDK execution with local timeline and model controls" />
+
+            <FlexLayout Direction="Row" Wrap="Wrap" AlignItems="Start" JustifyContent="Start">
+                <VerticalStackLayout Spacing="12" FlexLayout.Basis="500" FlexLayout.Grow="1" FlexLayout.Shrink="1">
+                    <Frame Padding="12" BorderColor="LightGray">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Execution Mode" FontAttributes="Bold" />
+                            <Picker ItemsSource="{Binding ExecutionModeOptions}" SelectedItem="{Binding SelectedExecutionMode}" />
+                            <Entry Text="{Binding ExternalEndpointUrl}"
+                                   Placeholder="localhost:8080"
+                                   IsVisible="{Binding IsExternalEndpointMode}" />
+                            <Button Text="Save Execution Settings" Clicked="OnSaveExecutionSettingsClicked" HorizontalOptions="Start" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="12" BorderColor="LightGray">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Workspace Grants" FontAttributes="Bold" />
+                            <Entry Text="{Binding NewGrantPath}" Placeholder="/absolute/path/to/workspace" />
+                            <Button Text="Add Folder Grant" Clicked="OnAddGrantClicked" HorizontalOptions="Start" />
+                            <CollectionView ItemsSource="{Binding GrantedFolders}" HeightRequest="140">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Label Text="{Binding .}" VerticalOptions="Center" LineBreakMode="MiddleTruncation" />
+                                            <Button Text="Remove"
+                                                    Clicked="OnRemoveGrantClicked"
+                                                    CommandParameter="{Binding .}"
+                                                    HorizontalOptions="EndAndExpand" />
+                                        </HorizontalStackLayout>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="12" BorderColor="LightGray">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Execution" FontAttributes="Bold" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Picker Grid.Column="0" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" />
+                                <Button Grid.Column="1" Text="Save Model" Clicked="OnSaveModelClicked" HorizontalOptions="End" />
+                            </Grid>
+                            <Editor Text="{Binding Prompt}" AutoSize="TextChanges" HeightRequest="120" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Run" Clicked="OnRunClicked" IsEnabled="{Binding CanRun}" HorizontalOptions="Start" />
+                                <Button Text="Stop" Clicked="OnStopClicked" IsEnabled="{Binding CanStop}" HorizontalOptions="Start" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="12" FlexLayout.Basis="500" FlexLayout.Grow="1" FlexLayout.Shrink="1">
+                    <Frame Padding="12" BorderColor="LightGray">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Auth Diagnostics" FontAttributes="Bold" />
+                            <Label Text="{Binding AuthStatus}" LineBreakMode="WordWrap" />
+                            <Label Text="{Binding EffectiveConnection, StringFormat='Effective connection: {0}'}" LineBreakMode="WordWrap" />
+                            <Label Text="{Binding CliVersion, StringFormat='CLI version: {0}'}" LineBreakMode="WordWrap" />
+                            <Label Text="{Binding ModelProbeStatus, StringFormat='Model list probe: {0}'}" LineBreakMode="WordWrap" />
+                            <Label Text="{Binding LastStartupError, StringFormat='Last startup error: {0}'}" LineBreakMode="WordWrap" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Refresh Auth" Clicked="OnRefreshAuthClicked" HorizontalOptions="Start" />
+                                <Button Text="Login" Clicked="OnLoginClicked" HorizontalOptions="Start" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="12" BorderColor="LightGray" IsVisible="{Binding HasDeviceFlowInfo}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Device Login" FontAttributes="Bold" />
+                            <Label Text="{Binding DeviceCode, StringFormat='User code: {0}'}" LineBreakMode="WordWrap" />
+                            <Label Text="{Binding VerificationUrl, StringFormat='Verification URL: {0}'}" LineBreakMode="WordWrap" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Copy Code" Clicked="OnCopyCodeClicked" HorizontalOptions="Start" />
+                                <Button Text="Open Verification Page" Clicked="OnOpenVerificationPageClicked" HorizontalOptions="Start" IsEnabled="{Binding CanOpenVerificationUrl}" />
+                                <Button Text="Dismiss" Clicked="OnDismissDeviceLoginClicked" HorizontalOptions="Start" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="12" BorderColor="LightGray" IsVisible="{Binding HasManualGuidance}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Terminal Guidance" FontAttributes="Bold" />
+                            <Label Text="{Binding ManualCommandGuidance}" LineBreakMode="WordWrap" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="12" BorderColor="LightGray">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Timeline" FontAttributes="Bold" />
+                            <CollectionView ItemsSource="{Binding Timeline}" HeightRequest="260">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Label Text="{Binding .}" LineBreakMode="WordWrap" />
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+            </FlexLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
