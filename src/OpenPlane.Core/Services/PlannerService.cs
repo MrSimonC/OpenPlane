@@ -25,9 +25,11 @@ public sealed class PlannerService : IPlannerService
     {
         var trimmed = prompt.Trim();
         var lower = trimmed.ToLowerInvariant();
+        var requestContext = trimmed.Length > 3000 ? trimmed[..3000] + "\n...[truncated]" : trimmed;
+        const string subagentGuidance = "Use subagents where possible to parallelize and improve reliability.";
         var steps = new List<PlanStep>
         {
-            new(Guid.NewGuid().ToString("N"), "Analyze request", "Identify intent, constraints, and expected output.", false)
+            new(Guid.NewGuid().ToString("N"), "Analyze request", $"User request:\n{requestContext}\n\nIdentify intent, constraints, and expected output.\n{subagentGuidance}", false)
         };
 
         if (trimmed.StartsWith("tool:", StringComparison.OrdinalIgnoreCase))
@@ -47,14 +49,14 @@ public sealed class PlannerService : IPlannerService
             steps.Add(new PlanStep(
                 Guid.NewGuid().ToString("N"),
                 "Run assistant reasoning",
-                "Use Copilot to produce the requested output while staying within granted workspace policy.",
+                $"Use Copilot to produce the requested output while staying within granted workspace policy.\n\nRequest:\n{requestContext}\n\n{subagentGuidance}",
                 true));
         }
 
         steps.Add(new PlanStep(
             Guid.NewGuid().ToString("N"),
             "Validate and summarize",
-            "Confirm output quality and summarize final result.",
+            $"Confirm output quality and summarize final result for this request:\n{requestContext}\n\n{subagentGuidance}",
             true));
 
         return steps;

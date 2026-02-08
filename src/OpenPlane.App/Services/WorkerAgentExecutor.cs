@@ -14,11 +14,18 @@ public sealed class WorkerAgentExecutor : IAgentExecutor, IAsyncDisposable
     private StreamWriter? processIn;
     private StreamReader? processOut;
     private readonly IWorkspaceSettingsStore workspaceSettingsStore;
+    private readonly ICopilotExecutionService copilotExecutionService;
+    private readonly IModelCatalogService modelCatalogService;
     private string? workerWorkspaceId;
 
-    public WorkerAgentExecutor(IWorkspaceSettingsStore workspaceSettingsStore)
+    public WorkerAgentExecutor(
+        IWorkspaceSettingsStore workspaceSettingsStore,
+        ICopilotExecutionService copilotExecutionService,
+        IModelCatalogService modelCatalogService)
     {
         this.workspaceSettingsStore = workspaceSettingsStore;
+        this.copilotExecutionService = copilotExecutionService;
+        this.modelCatalogService = modelCatalogService;
     }
 
     public async Task<string> ExecuteStepAsync(PlanStep step, CancellationToken cancellationToken)
@@ -27,6 +34,14 @@ public sealed class WorkerAgentExecutor : IAgentExecutor, IAsyncDisposable
         try
         {
             var workspaceId = await GetSelectedWorkspaceIdAsync(cancellationToken);
+            if (!IsToolStep(step))
+            {
+                var selection = await modelCatalogService.GetModelSelectionAsync(workspaceId, cancellationToken);
+                var model = string.IsNullOrWhiteSpace(selection.ModelId) ? "gpt-5-mini" : selection.ModelId;
+                var prompt = BuildReasoningPrompt(step);
+                return await copilotExecutionService.ExecutePromptAsync(prompt, model, [], cancellationToken);
+            }
+
             await EnsureProcessAsync(cancellationToken);
             await EnsureWorkerHealthyAsync(workspaceId, cancellationToken);
 
@@ -214,6 +229,24 @@ public sealed class WorkerAgentExecutor : IAgentExecutor, IAsyncDisposable
     private static string Quote(string value)
     {
         return value.Contains(' ') ? $"\"{value}\"" : value;
+    }
+
+    private static bool IsToolStep(PlanStep step)
+    {
+        var details = step.Details?.Trim();
+        return !string.IsNullOrWhiteSpace(details) &&
+               details.StartsWith("tool:", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildReasoningPrompt(PlanStep step)
+    {
+        var details = step.Details?.Trim();
+        if (string.IsNullOrWhiteSpace(details))
+        {
+            return step.Title;
+        }
+
+        return $"Plan step: {step.Title}{Environment.NewLine}{Environment.NewLine}{details}";
     }
 
     private static string ResolveWorkspacePoliciesPath()

@@ -2,176 +2,237 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="OpenPlane.App.MainPage"
-             Title="OpenPlane">
+             Title="OpenPlane"
+             BackgroundColor="#0F1218">
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
-            <Label Text="OpenPlane" FontAttributes="Bold" FontSize="24" />
-            <Label Text="Copilot SDK execution with local timeline and model controls" />
+        <VerticalStackLayout Padding="18" Spacing="14">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="10">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="OpenPlane" FontAttributes="Bold" FontSize="30" TextColor="#EEF2FF" />
+                    <Label Text="Plan, run, and monitor agent work" FontSize="13" TextColor="#A8B0C3" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1"
+                        Text="{Binding AuthIndicatorGlyph}"
+                        Clicked="OnToggleAuthClicked"
+                        FontAttributes="Bold"
+                        FontSize="14"
+                        WidthRequest="34"
+                        HeightRequest="34"
+                        Padding="0"
+                        BackgroundColor="{Binding AuthIndicatorColor}"
+                        TextColor="White"
+                        CornerRadius="17" />
+                <Button Grid.Column="2"
+                        Text="MCP"
+                        Clicked="OnToggleMcpClicked"
+                        FontSize="12"
+                        Padding="10,6"
+                        BackgroundColor="#171D2A"
+                        TextColor="#C9D2E6"
+                        IsEnabled="{Binding IsInterfaceEnabled}"
+                        BorderColor="#2A3142"
+                        BorderWidth="1"
+                        CornerRadius="12" />
+                <Button Grid.Column="3"
+                        Text="Network"
+                        Clicked="OnToggleNetworkClicked"
+                        FontSize="12"
+                        Padding="10,6"
+                        BackgroundColor="#171D2A"
+                        TextColor="#C9D2E6"
+                        IsEnabled="{Binding IsInterfaceEnabled}"
+                        BorderColor="#2A3142"
+                        BorderWidth="1"
+                        CornerRadius="12" />
+                <Button Grid.Column="4"
+                        Text="{Binding SelectedWorkspaceId, StringFormat='Workspace: {0}'}"
+                        Clicked="OnToggleWorkspaceClicked"
+                        FontSize="12"
+                        Padding="12,6"
+                        BackgroundColor="#171D2A"
+                        TextColor="#C9D2E6"
+                        IsEnabled="{Binding IsInterfaceEnabled}"
+                        BorderColor="#2A3142"
+                        BorderWidth="1"
+                        CornerRadius="12" />
+            </Grid>
 
-            <FlexLayout Direction="Row" Wrap="Wrap" AlignItems="Start" JustifyContent="Start">
-                <VerticalStackLayout Spacing="12" FlexLayout.Basis="500" FlexLayout.Grow="1" FlexLayout.Shrink="1">
-                    <Frame Padding="12" BorderColor="LightGray">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="Workspace" FontAttributes="Bold" />
-                            <Picker ItemsSource="{Binding Workspaces}"
-                                    SelectedItem="{Binding SelectedWorkspaceId}"
-                                    SelectedIndexChanged="OnWorkspaceSelectionChanged" />
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <Entry Grid.Column="0" Text="{Binding NewWorkspaceId}" Placeholder="workspace-id" />
-                                <Button Grid.Column="1" Text="Add" Clicked="OnAddWorkspaceClicked" />
-                                <Button Grid.Column="2" Text="Remove Current" Clicked="OnRemoveWorkspaceClicked" />
+            <Border Stroke="#2A3142" StrokeShape="RoundRectangle 12" Background="#161B27" Padding="10" IsVisible="{Binding IsAuthPanelVisible}">
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Auth" FontAttributes="Bold" FontSize="13" TextColor="#DEE7FB" />
+                    <Label Text="{Binding AuthStatus}" FontSize="11" LineBreakMode="WordWrap" TextColor="#B9C3D9" />
+                    <Label Text="{Binding EffectiveConnection, StringFormat='Conn: {0}'}" FontSize="10" LineBreakMode="WordWrap" TextColor="#8F9BB7" />
+                    <Label Text="{Binding ModelProbeStatus, StringFormat='Probe: {0}'}" FontSize="10" TextColor="#8F9BB7" />
+                    <Label Text="{Binding LastStartupError, StringFormat='Error: {0}'}" FontSize="10" LineBreakMode="WordWrap" TextColor="#8F9BB7" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Button Text="Refresh Auth" Clicked="OnRefreshAuthClicked" FontSize="12" HeightRequest="34" />
+                        <Button Text="Login" Clicked="OnLoginClicked" FontSize="12" HeightRequest="34" IsVisible="{Binding CanLogin}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Stroke="#2A3142" StrokeShape="RoundRectangle 12" Background="#161B27" Padding="10" IsVisible="{Binding HasDeviceFlowInfo}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Device Login" FontAttributes="Bold" FontSize="13" TextColor="#DEE7FB" />
+                    <Label Text="{Binding DeviceCode, StringFormat='Code: {0}'}" FontSize="11" TextColor="#C5D0E8" />
+                    <Label Text="{Binding VerificationUrl}" FontSize="10" LineBreakMode="MiddleTruncation" TextColor="#95A4C7" />
+                    <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="6">
+                        <Button Grid.Column="0" Text="Copy" Clicked="OnCopyCodeClicked" FontSize="11" HeightRequest="32" />
+                        <Button Grid.Column="1" Text="Open" Clicked="OnOpenVerificationPageClicked" FontSize="11" HeightRequest="32" IsEnabled="{Binding CanOpenVerificationUrl}" />
+                        <Button Grid.Column="2" Text="Dismiss" Clicked="OnDismissDeviceLoginClicked" FontSize="11" HeightRequest="32" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <FlexLayout Direction="Row" Wrap="Wrap" AlignItems="Start" JustifyContent="Start" IsEnabled="{Binding IsInterfaceEnabled}">
+                <VerticalStackLayout Spacing="14" FlexLayout.Basis="760" FlexLayout.Grow="1" FlexLayout.Shrink="1">
+                    <Border Stroke="#2F3A52" StrokeShape="RoundRectangle 14" Background="#171D2A" Padding="14">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Label Text="Execution" FontAttributes="Bold" FontSize="18" TextColor="#ECF1FF" />
+                                <Button Grid.Column="1" Text="Save Model" Clicked="OnSaveModelClicked" FontSize="12" HeightRequest="34" Padding="14,6" />
                             </Grid>
-                        </VerticalStackLayout>
-                    </Frame>
 
-                    <Frame Padding="12" BorderColor="LightGray">
+                            <Picker ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" HeightRequest="40" />
+
+                            <Editor Text="{Binding Prompt}" AutoSize="TextChanges" HeightRequest="230" Placeholder="Ask OpenPlane to do work..." IsEnabled="{Binding HasFolderGrants}" />
+
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                                <Button Grid.Column="0" Text="Run" Clicked="OnRunClicked" IsEnabled="{Binding CanRun}" FontAttributes="Bold" FontSize="16" HeightRequest="52" BackgroundColor="#2B6EFF" TextColor="White" CornerRadius="12" />
+                                <Button Grid.Column="1" Text="Stop" Clicked="OnStopClicked" IsEnabled="{Binding CanStop}" FontAttributes="Bold" FontSize="15" HeightRequest="52" BackgroundColor="#913737" TextColor="White" CornerRadius="12" />
+                                <Button Grid.Column="2" Text="Clear Session" Clicked="OnClearSessionClicked" FontSize="13" HeightRequest="52" CornerRadius="12" />
+                            </Grid>
+
+                            <Label Text="{Binding CurrentPlanSummary}" LineBreakMode="WordWrap" FontSize="12" TextColor="#ACB7CF" />
+                            <Label Text="{Binding LatestRunStatus}" LineBreakMode="WordWrap" FontSize="12" TextColor="#B5C1DA" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Stroke="#2F3A52" StrokeShape="RoundRectangle 14" Background="#171D2A" Padding="14">
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="Workspace Grants" FontAttributes="Bold" />
-                            <Entry Text="{Binding NewGrantPath}" Placeholder="/absolute/path/to/workspace" />
-                            <Button Text="Add Folder Grant" Clicked="OnAddGrantClicked" HorizontalOptions="Start" />
-                            <CollectionView ItemsSource="{Binding GrantedFolders}" HeightRequest="140">
+                            <Label Text="Final Response" FontAttributes="Bold" FontSize="18" TextColor="#ECF1FF" />
+                            <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsRunProcessing}">
+                                <ActivityIndicator IsRunning="{Binding IsRunProcessing}" Color="#6EA8FF" />
+                                <Label Text="Processing..." FontSize="13" TextColor="#AFC1E6" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                            <ScrollView HeightRequest="170">
+                                <ScrollView.Triggers>
+                                    <DataTrigger TargetType="ScrollView" Binding="{Binding IsRunProcessing}" Value="True">
+                                        <Setter Property="IsVisible" Value="False" />
+                                    </DataTrigger>
+                                </ScrollView.Triggers>
+                                <Label Text="{Binding FinalResponse}"
+                                       LineBreakMode="WordWrap"
+                                       FontSize="14"
+                                       TextColor="#E8EEFC" />
+                            </ScrollView>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Stroke="#2F3A52" StrokeShape="RoundRectangle 14" Background="#171D2A" Padding="14">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Timeline (Thinking / Steps)" FontAttributes="Bold" FontSize="18" TextColor="#ECF1FF" />
+                            <CollectionView ItemsSource="{Binding Timeline}" HeightRequest="380">
                                 <CollectionView.ItemTemplate>
                                     <DataTemplate>
-                                        <HorizontalStackLayout Spacing="8">
-                                            <Label Text="{Binding .}" VerticalOptions="Center" LineBreakMode="MiddleTruncation" />
-                                            <Button Text="Remove"
-                                                    Clicked="OnRemoveGrantClicked"
-                                                    CommandParameter="{Binding .}"
-                                                    HorizontalOptions="EndAndExpand" />
-                                        </HorizontalStackLayout>
+                                        <Border Stroke="#283046" StrokeShape="RoundRectangle 10" Background="#111622" Padding="10" Margin="0,0,0,6">
+                                            <Label Text="{Binding .}" LineBreakMode="WordWrap" FontSize="13" TextColor="#D7DEF0" />
+                                        </Border>
                                     </DataTemplate>
                                 </CollectionView.ItemTemplate>
                             </CollectionView>
                         </VerticalStackLayout>
-                    </Frame>
+                    </Border>
+                </VerticalStackLayout>
 
-                    <Frame Padding="12" BorderColor="LightGray">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="Network Allowlist" FontAttributes="Bold" />
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                <Entry Grid.Column="0" Text="{Binding NewAllowedHost}" Placeholder="api.github.com" />
-                                <Button Grid.Column="1" Text="Add Host" Clicked="OnAddAllowedHostClicked" />
-                                <Button Grid.Column="2" Text="Use Defaults" Clicked="OnApplyDefaultAllowlistClicked" />
+                <VerticalStackLayout Spacing="10" FlexLayout.Basis="330" FlexLayout.Grow="1" FlexLayout.Shrink="1">
+                    <Border Stroke="#2A3142" StrokeShape="RoundRectangle 12" Background="#161B27" Padding="10" IsVisible="{Binding IsWorkspacePanelVisible}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Workspace" FontAttributes="Bold" FontSize="13" TextColor="#DEE7FB" />
+                            <Picker ItemsSource="{Binding Workspaces}" SelectedItem="{Binding SelectedWorkspaceId, Mode=OneWay}" SelectedIndexChanged="OnWorkspaceSelectionChanged" HeightRequest="34" />
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <Entry Grid.Column="0" Text="{Binding NewWorkspaceId}" Placeholder="workspace-id" FontSize="12" HeightRequest="34" />
+                                <Button Grid.Column="1" Text="Add" Clicked="OnAddWorkspaceClicked" FontSize="11" HeightRequest="34" />
+                                <Button Grid.Column="2" Text="Remove" Clicked="OnRemoveWorkspaceClicked" FontSize="11" HeightRequest="34" />
                             </Grid>
-                            <CollectionView ItemsSource="{Binding AllowedHosts}" HeightRequest="120">
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Stroke="#2A3142" StrokeShape="RoundRectangle 12" Background="#161B27" Padding="10">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Folder Grants" FontAttributes="Bold" FontSize="13" TextColor="#DEE7FB" />
+                            <Label Text="add grant to a folder"
+                                   FontSize="11"
+                                   TextColor="#E8A35E"
+                                   IsVisible="{Binding ShowAddGrantHint}" />
+                            <Entry Text="{Binding NewGrantPath}" Placeholder="/absolute/path" FontSize="12" HeightRequest="34" />
+                            <Border Stroke="#36527A" StrokeShape="RoundRectangle 10" Background="#121A2A" Padding="8" HeightRequest="58">
+                                <Border.GestureRecognizers>
+                                    <DropGestureRecognizer DragOver="OnGrantDropAreaDragOver" Drop="OnGrantDropAreaDrop" />
+                                </Border.GestureRecognizers>
+                                <Label Text="Drop a folder here to add grant (files rejected)"
+                                       FontSize="11"
+                                       TextColor="#9FB5DA"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
+                            </Border>
+                            <Button Text="Add Grant" Clicked="OnAddGrantClicked" FontSize="12" HeightRequest="34" HorizontalOptions="Start" />
+                            <CollectionView ItemsSource="{Binding GrantedFolders}" HeightRequest="95">
                                 <CollectionView.ItemTemplate>
                                     <DataTemplate>
-                                        <HorizontalStackLayout Spacing="8">
-                                            <Label Text="{Binding .}" VerticalOptions="Center" />
-                                            <Button Text="Remove"
-                                                    Clicked="OnRemoveAllowedHostClicked"
-                                                    CommandParameter="{Binding .}"
-                                                    HorizontalOptions="EndAndExpand" />
-                                        </HorizontalStackLayout>
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,4">
+                                            <Label Text="{Binding .}" FontSize="10" VerticalOptions="Center" LineBreakMode="MiddleTruncation" TextColor="#B7C3DE" />
+                                            <Button Grid.Column="1" Text="Remove" Clicked="OnRemoveGrantClicked" CommandParameter="{Binding .}" FontSize="10" HeightRequest="28" />
+                                        </Grid>
                                     </DataTemplate>
                                 </CollectionView.ItemTemplate>
                             </CollectionView>
                         </VerticalStackLayout>
-                    </Frame>
+                    </Border>
 
-                    <Frame Padding="12" BorderColor="LightGray">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="MCP Connectors" FontAttributes="Bold" />
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                <Entry Grid.Column="0" Text="{Binding NewConnectorName}" Placeholder="connector-name" />
-                                <Entry Grid.Column="1" Text="{Binding NewConnectorCommand}" Placeholder="command (e.g. npx @playwright/mcp@latest)" />
+                    <Border Stroke="#2A3142" StrokeShape="RoundRectangle 12" Background="#161B27" Padding="10" IsVisible="{Binding IsNetworkPanelVisible}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Network Allowlist" FontAttributes="Bold" FontSize="13" TextColor="#DEE7FB" />
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <Entry Grid.Column="0" Text="{Binding NewAllowedHost}" Placeholder="api.github.com" FontSize="12" HeightRequest="34" />
+                                <Button Grid.Column="1" Text="Add" Clicked="OnAddAllowedHostClicked" FontSize="11" HeightRequest="34" />
+                                <Button Grid.Column="2" Text="Defaults" Clicked="OnApplyDefaultAllowlistClicked" FontSize="11" HeightRequest="34" />
                             </Grid>
-                            <Button Text="Save Connector" Clicked="OnSaveConnectorClicked" HorizontalOptions="Start" />
-                            <CollectionView ItemsSource="{Binding ConnectorStatuses}" HeightRequest="140">
+                            <CollectionView ItemsSource="{Binding AllowedHosts}" HeightRequest="90">
                                 <CollectionView.ItemTemplate>
                                     <DataTemplate>
-                                        <VerticalStackLayout Spacing="4" Margin="0,0,0,8">
-                                            <Label Text="{Binding Name}" FontAttributes="Bold" />
-                                            <Label Text="{Binding Command}" LineBreakMode="MiddleTruncation" />
-                                            <Label Text="{Binding Status}" />
-                                            <Label Text="{Binding LastError}" IsVisible="{Binding LastError}" LineBreakMode="WordWrap" />
-                                            <HorizontalStackLayout Spacing="8">
-                                                <Button Text="Connect" Clicked="OnConnectConnectorClicked" CommandParameter="{Binding Name}" />
-                                                <Button Text="Disconnect" Clicked="OnDisconnectConnectorClicked" CommandParameter="{Binding Name}" />
-                                            </HorizontalStackLayout>
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,4">
+                                            <Label Text="{Binding .}" FontSize="10" VerticalOptions="Center" TextColor="#B7C3DE" />
+                                            <Button Grid.Column="1" Text="Remove" Clicked="OnRemoveAllowedHostClicked" CommandParameter="{Binding .}" FontSize="10" HeightRequest="28" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Stroke="#2A3142" StrokeShape="RoundRectangle 12" Background="#161B27" Padding="10" IsVisible="{Binding IsMcpPanelVisible}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="MCP Connectors" FontAttributes="Bold" FontSize="13" TextColor="#DEE7FB" />
+                            <Entry Text="{Binding NewConnectorName}" Placeholder="name" FontSize="12" HeightRequest="34" />
+                            <Entry Text="{Binding NewConnectorCommand}" Placeholder="command" FontSize="12" HeightRequest="34" />
+                            <Button Text="Save" Clicked="OnSaveConnectorClicked" FontSize="12" HeightRequest="34" HorizontalOptions="Start" />
+                            <CollectionView ItemsSource="{Binding ConnectorStatuses}" HeightRequest="115">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <VerticalStackLayout Spacing="3" Margin="0,0,0,6">
+                                            <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="11" TextColor="#D2DCF3" />
+                                            <Label Text="{Binding Status}" FontSize="10" TextColor="#AEBBD8" />
+                                            <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="6">
+                                                <Button Grid.Column="0" Text="Connect" Clicked="OnConnectConnectorClicked" CommandParameter="{Binding Name}" FontSize="10" HeightRequest="28" />
+                                                <Button Grid.Column="1" Text="Disconnect" Clicked="OnDisconnectConnectorClicked" CommandParameter="{Binding Name}" FontSize="10" HeightRequest="28" />
+                                            </Grid>
                                         </VerticalStackLayout>
                                     </DataTemplate>
                                 </CollectionView.ItemTemplate>
                             </CollectionView>
                         </VerticalStackLayout>
-                    </Frame>
-
-                    <Frame Padding="12" BorderColor="LightGray">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="Execution" FontAttributes="Bold" />
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <Picker Grid.Column="0" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" />
-                                <Button Grid.Column="1" Text="Save Model" Clicked="OnSaveModelClicked" HorizontalOptions="End" />
-                            </Grid>
-                            <Editor Text="{Binding Prompt}" AutoSize="TextChanges" HeightRequest="120" />
-                            <Label Text="{Binding CurrentPlanSummary}" LineBreakMode="WordWrap" />
-                            <Label Text="{Binding LatestRunStatus}" LineBreakMode="WordWrap" />
-                            <HorizontalStackLayout Spacing="8">
-                                <Button Text="Create Plan" Clicked="OnCreatePlanClicked" HorizontalOptions="Start" />
-                                <Button Text="Approve Plan" Clicked="OnApprovePlanClicked" IsEnabled="{Binding CanApprovePlan}" HorizontalOptions="Start" />
-                            </HorizontalStackLayout>
-                            <HorizontalStackLayout Spacing="8">
-                                <Button Text="Run Plan" Clicked="OnExecutePlanClicked" IsEnabled="{Binding CanExecutePlan}" HorizontalOptions="Start" />
-                                <Button Text="Resume Run" Clicked="OnResumeRunClicked" HorizontalOptions="Start" />
-                            </HorizontalStackLayout>
-                            <HorizontalStackLayout Spacing="8">
-                                <Button Text="Run" Clicked="OnRunClicked" IsEnabled="{Binding CanRun}" HorizontalOptions="Start" />
-                                <Button Text="Stop" Clicked="OnStopClicked" IsEnabled="{Binding CanStop}" HorizontalOptions="Start" />
-                                <Button Text="Clear Session" Clicked="OnClearSessionClicked" HorizontalOptions="Start" />
-                            </HorizontalStackLayout>
-                        </VerticalStackLayout>
-                    </Frame>
-                </VerticalStackLayout>
-
-                <VerticalStackLayout Spacing="12" FlexLayout.Basis="500" FlexLayout.Grow="1" FlexLayout.Shrink="1">
-                    <Frame Padding="12" BorderColor="LightGray">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="Auth Diagnostics" FontAttributes="Bold" />
-                            <Label Text="{Binding AuthStatus}" LineBreakMode="WordWrap" />
-                            <Label Text="{Binding EffectiveConnection, StringFormat='Effective connection: {0}'}" LineBreakMode="WordWrap" />
-                            <Label Text="{Binding CliVersion, StringFormat='CLI version: {0}'}" LineBreakMode="WordWrap" />
-                            <Label Text="{Binding ModelProbeStatus, StringFormat='Model list probe: {0}'}" LineBreakMode="WordWrap" />
-                            <Label Text="{Binding LastStartupError, StringFormat='Last startup error: {0}'}" LineBreakMode="WordWrap" />
-                            <HorizontalStackLayout Spacing="8">
-                                <Button Text="Refresh Auth" Clicked="OnRefreshAuthClicked" HorizontalOptions="Start" />
-                                <Button Text="Login" Clicked="OnLoginClicked" HorizontalOptions="Start" />
-                                <Button Text="Export Logs" Clicked="OnExportDiagnosticsClicked" HorizontalOptions="Start" />
-                            </HorizontalStackLayout>
-                        </VerticalStackLayout>
-                    </Frame>
-
-                    <Frame Padding="12" BorderColor="LightGray" IsVisible="{Binding HasDeviceFlowInfo}">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="Device Login" FontAttributes="Bold" />
-                            <Label Text="{Binding DeviceCode, StringFormat='User code: {0}'}" LineBreakMode="WordWrap" />
-                            <Label Text="{Binding VerificationUrl, StringFormat='Verification URL: {0}'}" LineBreakMode="WordWrap" />
-                            <HorizontalStackLayout Spacing="8">
-                                <Button Text="Copy Code" Clicked="OnCopyCodeClicked" HorizontalOptions="Start" />
-                                <Button Text="Open Verification Page" Clicked="OnOpenVerificationPageClicked" HorizontalOptions="Start" IsEnabled="{Binding CanOpenVerificationUrl}" />
-                                <Button Text="Dismiss" Clicked="OnDismissDeviceLoginClicked" HorizontalOptions="Start" />
-                            </HorizontalStackLayout>
-                        </VerticalStackLayout>
-                    </Frame>
-
-                    <Frame Padding="12" BorderColor="LightGray" IsVisible="{Binding HasManualGuidance}">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="Terminal Guidance" FontAttributes="Bold" />
-                            <Label Text="{Binding ManualCommandGuidance}" LineBreakMode="WordWrap" />
-                        </VerticalStackLayout>
-                    </Frame>
-
-                    <Frame Padding="12" BorderColor="LightGray">
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Timeline" FontAttributes="Bold" />
-                            <CollectionView ItemsSource="{Binding Timeline}" HeightRequest="260">
-                                <CollectionView.ItemTemplate>
-                                    <DataTemplate>
-                                        <Label Text="{Binding .}" LineBreakMode="WordWrap" />
-                                    </DataTemplate>
-                                </CollectionView.ItemTemplate>
-                            </CollectionView>
-                        </VerticalStackLayout>
-                    </Frame>
+                    </Border>
                 </VerticalStackLayout>
             </FlexLayout>
         </VerticalStackLayout>

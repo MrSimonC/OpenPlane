@@ -18,7 +18,6 @@ public sealed class MainPageViewModel(
     IMcpConnectorBroker connectorBroker,
     IAgentExecutor agentExecutor,
     INetworkPolicyGuard networkPolicyGuard,
-    ILocalLogService localLogService,
     ICopilotAuthService authService,
     ICopilotExecutionService executionService,
     IPromptAttachmentResolver promptAttachmentResolver,
@@ -46,9 +45,16 @@ public sealed class MainPageViewModel(
     private string currentPlanSummary = "No plan created.";
     private bool isCurrentPlanApproved;
     private string latestRunStatus = "No run session.";
+    private string finalResponse = string.Empty;
+    private bool isRunProcessing;
     private string newConnectorName = string.Empty;
     private string newConnectorCommand = string.Empty;
+    private bool isWorkspacePanelVisible;
+    private bool isAuthPanelVisible;
+    private bool isMcpPanelVisible;
+    private bool isNetworkPanelVisible;
     private bool canStop;
+    private bool hasFolderGrants;
     private CancellationTokenSource? activeOperationCts;
     private string? activeOperationName;
 
@@ -141,6 +147,18 @@ public sealed class MainPageViewModel(
         private set => SetProperty(ref latestRunStatus, value);
     }
 
+    public string FinalResponse
+    {
+        get => finalResponse;
+        private set => SetProperty(ref finalResponse, value);
+    }
+
+    public bool IsRunProcessing
+    {
+        get => isRunProcessing;
+        private set => SetProperty(ref isRunProcessing, value);
+    }
+
     public bool IsAuthenticated
     {
         get => isAuthenticated;
@@ -149,6 +167,10 @@ public sealed class MainPageViewModel(
             if (SetProperty(ref isAuthenticated, value))
             {
                 OnPropertyChanged(nameof(CanRun));
+                OnPropertyChanged(nameof(CanLogin));
+                OnPropertyChanged(nameof(IsInterfaceEnabled));
+                OnPropertyChanged(nameof(AuthIndicatorColor));
+                OnPropertyChanged(nameof(AuthIndicatorGlyph));
             }
         }
     }
@@ -244,12 +266,53 @@ public sealed class MainPageViewModel(
         private set => SetProperty(ref canStop, value);
     }
 
-    public bool CanRun => IsAuthenticated && !IsBusy && !string.IsNullOrWhiteSpace(Prompt);
+    public bool CanRun => IsAuthenticated && HasFolderGrants && !IsBusy && !string.IsNullOrWhiteSpace(Prompt);
+    public bool CanLogin => !IsAuthenticated;
+    public bool IsInterfaceEnabled => IsAuthenticated;
     public bool CanApprovePlan => !IsBusy && !IsCurrentPlanApproved;
     public bool CanExecutePlan => !IsBusy && IsCurrentPlanApproved;
+    public string AuthIndicatorColor => IsAuthenticated ? "#2E9D5B" : "#C34141";
+    public string AuthIndicatorGlyph => IsAuthenticated ? "✓" : "!";
+    public bool IsWorkspacePanelVisible
+    {
+        get => isWorkspacePanelVisible;
+        private set => SetProperty(ref isWorkspacePanelVisible, value);
+    }
+    public bool IsAuthPanelVisible
+    {
+        get => isAuthPanelVisible;
+        private set => SetProperty(ref isAuthPanelVisible, value);
+    }
+    public bool IsMcpPanelVisible
+    {
+        get => isMcpPanelVisible;
+        private set => SetProperty(ref isMcpPanelVisible, value);
+    }
+    public bool IsNetworkPanelVisible
+    {
+        get => isNetworkPanelVisible;
+        private set => SetProperty(ref isNetworkPanelVisible, value);
+    }
+    public bool HasFolderGrants
+    {
+        get => hasFolderGrants;
+        private set
+        {
+            if (SetProperty(ref hasFolderGrants, value))
+            {
+                OnPropertyChanged(nameof(CanRun));
+                OnPropertyChanged(nameof(ShowAddGrantHint));
+            }
+        }
+    }
+    public bool ShowAddGrantHint => !HasFolderGrants;
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
+        IsWorkspacePanelVisible = false;
+        IsAuthPanelVisible = false;
+        IsMcpPanelVisible = false;
+        IsNetworkPanelVisible = false;
         var recoveredRuns = await planExecutionService.RecoverRunningRunsAsync(cancellationToken);
         if (recoveredRuns > 0)
         {
@@ -257,6 +320,7 @@ public sealed class MainPageViewModel(
         }
 
         await LoadWorkspaceSettingsAsync(cancellationToken);
+        await EnsureDefaultWorkspaceSelectedOnFirstRunAsync(cancellationToken);
         await LoadWorkspacePolicyAsync(cancellationToken);
         await RunHealthChecksAsync(cancellationToken);
         await LoadModelsAsync(cancellationToken);
@@ -497,6 +561,18 @@ public sealed class MainPageViewModel(
         AddTimeline($"Added grant: {fullPath}");
     }
 
+    public async Task AddFolderGrantPathAsync(string path, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            AddTimeline("Dropped path is empty.");
+            return;
+        }
+
+        NewGrantPath = path;
+        await AddFolderGrantAsync(cancellationToken);
+    }
+
     public async Task RemoveFolderGrantAsync(string path, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -684,23 +760,6 @@ public sealed class MainPageViewModel(
         AddTimeline("Device-flow details dismissed.");
     }
 
-    public async Task ExportDiagnosticsAsync(CancellationToken cancellationToken)
-    {
-        var destination = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "OpenPlane",
-            "exports");
-
-        var path = await localLogService.ExportAsync(destination, cancellationToken);
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            AddTimeline("Diagnostics export skipped (local logging disabled or no logs).");
-            return;
-        }
-
-        AddTimeline($"Diagnostics exported: {path}");
-    }
-
     public Task StopAsync()
     {
         var cts = activeOperationCts;
@@ -718,7 +777,31 @@ public sealed class MainPageViewModel(
     public async Task ClearSessionAsync(CancellationToken cancellationToken)
     {
         await historyRepository.ClearEntriesAsync(SelectedWorkspaceId, cancellationToken);
+        Timeline.Clear();
+        FinalResponse = string.Empty;
+        Prompt = string.Empty;
         AddTimeline($"Session cleared for workspace: {SelectedWorkspaceId}");
+    }
+
+    public void ToggleWorkspacePanel()
+    {
+        EnsureWorkspaceListReady();
+        IsWorkspacePanelVisible = !IsWorkspacePanelVisible;
+    }
+
+    public void ToggleAuthPanel()
+    {
+        IsAuthPanelVisible = !IsAuthPanelVisible;
+    }
+
+    public void ToggleMcpPanel()
+    {
+        IsMcpPanelVisible = !IsMcpPanelVisible;
+    }
+
+    public void ToggleNetworkPanel()
+    {
+        IsNetworkPanelVisible = !IsNetworkPanelVisible;
     }
 
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -735,6 +818,8 @@ public sealed class MainPageViewModel(
             return;
         }
 
+        FinalResponse = string.Empty;
+        IsRunProcessing = true;
         AddTimeline($"Running with model `{SelectedModel}`...");
 
         try
@@ -742,14 +827,14 @@ public sealed class MainPageViewModel(
             var workspaceImages = await TryHandleWorkspaceImageIntentAsync(operationToken);
             if (workspaceImages.Handled)
             {
-                AddTimeline($"Assistant: {workspaceImages.Output}");
+                SetFinalResponse(workspaceImages.Output);
                 return;
             }
 
             var workspaceListing = await TryHandleWorkspaceListIntentAsync(operationToken);
             if (workspaceListing.Handled)
             {
-                AddTimeline($"Assistant: {workspaceListing.Output}");
+                SetFinalResponse(workspaceListing.Output);
                 return;
             }
 
@@ -767,6 +852,16 @@ public sealed class MainPageViewModel(
                 new ConversationEntry(Guid.NewGuid().ToString("N"), SelectedWorkspaceId, "user", Prompt, DateTimeOffset.UtcNow),
                 operationToken);
 
+            if (IsComplexPrompt(Prompt))
+            {
+                var plannedOutput = await ExecuteAutoPlanAsync(Prompt, promptForExecution, operationToken);
+                SetFinalResponse(plannedOutput);
+                await historyRepository.AddEntryAsync(
+                    new ConversationEntry(Guid.NewGuid().ToString("N"), SelectedWorkspaceId, "assistant", plannedOutput, DateTimeOffset.UtcNow),
+                    operationToken);
+                return;
+            }
+
             var policy = await workspacePolicyStore.GetAsync(SelectedWorkspaceId, operationToken);
             var attachments = await promptAttachmentResolver.ResolveAsync(Prompt, policy, operationToken);
             if (attachments.Count > 0)
@@ -775,7 +870,7 @@ public sealed class MainPageViewModel(
             }
 
             var assistantOutput = await executionService.ExecutePromptAsync(promptForExecution, SelectedModel, attachments, operationToken);
-            AddTimeline($"Assistant: {assistantOutput}");
+            SetFinalResponse(assistantOutput);
 
             await historyRepository.AddEntryAsync(
                 new ConversationEntry(Guid.NewGuid().ToString("N"), SelectedWorkspaceId, "assistant", assistantOutput, DateTimeOffset.UtcNow),
@@ -795,8 +890,91 @@ public sealed class MainPageViewModel(
         }
         finally
         {
+            IsRunProcessing = false;
             EndOperation(operationCts);
         }
+    }
+
+    private async Task<string> ExecuteAutoPlanAsync(string originalPrompt, string promptForExecution, CancellationToken cancellationToken)
+    {
+        AddTimeline("Complex request detected. Auto-planning and executing...");
+
+        var plan = await planExecutionService.CreatePlanAsync(SelectedWorkspaceId, promptForExecution, cancellationToken);
+        var approved = await planExecutionService.ApproveLatestPlanAsync(SelectedWorkspaceId, cancellationToken);
+        AddTimeline($"Plan created ({plan.Steps.Count} steps) and auto-approved ({approved.PlanId}).");
+
+        var stepOutputs = new List<string>();
+        string latestOutput = string.Empty;
+        await foreach (var evt in planExecutionService.ExecuteLatestApprovedPlanAsync(SelectedWorkspaceId, cancellationToken))
+        {
+            AddTimeline(FormatRunEvent(evt));
+            if (evt.EventType == RunEventType.StepOutput && !string.IsNullOrWhiteSpace(evt.Message))
+            {
+                latestOutput = evt.Message;
+                stepOutputs.Add(evt.Message.Trim());
+            }
+        }
+
+        await RefreshPlanStateAsync(cancellationToken);
+        if (stepOutputs.Count == 0)
+        {
+            return string.IsNullOrWhiteSpace(latestOutput) ? "Plan completed." : latestOutput;
+        }
+
+        AddTimeline("Finalizing response...");
+        var consolidated = BuildFinalizationPrompt(originalPrompt, stepOutputs);
+        var final = await executionService.ExecutePromptAsync(consolidated, SelectedModel, [], cancellationToken);
+        return string.IsNullOrWhiteSpace(final)
+            ? (string.IsNullOrWhiteSpace(latestOutput) ? "Plan completed." : latestOutput)
+            : final;
+    }
+
+    private static bool IsComplexPrompt(string prompt)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            return false;
+        }
+
+        var trimmed = prompt.Trim();
+        var lower = trimmed.ToLowerInvariant();
+
+        if (trimmed.Length >= 180)
+        {
+            return true;
+        }
+
+        if (lower.Contains("plan", StringComparison.Ordinal) ||
+            lower.Contains("research", StringComparison.Ordinal) ||
+            lower.Contains("compare", StringComparison.Ordinal) ||
+            lower.Contains("latest", StringComparison.Ordinal) ||
+            lower.Contains("top ", StringComparison.Ordinal) ||
+            lower.Contains("news", StringComparison.Ordinal) ||
+            lower.Contains("use internet", StringComparison.Ordinal) ||
+            lower.Contains("step by step", StringComparison.Ordinal) ||
+            lower.Contains("analyze and summarize", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var separators = new[] { " and ", " then ", " also ", "," };
+        var parts = separators.Sum(x => lower.Split(x, StringSplitOptions.None).Length - 1);
+        return parts >= 2;
+    }
+
+    private static string BuildFinalizationPrompt(string originalPrompt, IReadOnlyList<string> stepOutputs)
+    {
+        var renderedOutputs = string.Join(
+            $"{Environment.NewLine}---{Environment.NewLine}",
+            stepOutputs.TakeLast(8).Select((output, index) => $"Step output {index + 1}:{Environment.NewLine}{output}"));
+
+        return
+            "You are preparing the final end-user answer after intermediate planning steps.\n" +
+            "Return the completed answer only.\n" +
+            "Do not return process/status text like \"fetching\", \"analyzing\", or \"working on it\".\n" +
+            "If information appears incomplete, continue reasoning and provide the best complete answer now.\n\n" +
+            $"Original user request:{Environment.NewLine}{originalPrompt.Trim()}{Environment.NewLine}{Environment.NewLine}" +
+            $"Intermediate outputs:{Environment.NewLine}{renderedOutputs}";
     }
 
     private async Task<(bool Handled, string Output)> TryHandleWorkspaceListIntentAsync(CancellationToken cancellationToken)
@@ -1002,6 +1180,7 @@ public sealed class MainPageViewModel(
         {
             GrantedFolders.Add(path);
         }
+        HasFolderGrants = GrantedFolders.Count > 0;
 
         AllowedHosts.Clear();
         foreach (var host in policy.NetworkAllowlist.AllowedHosts.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
@@ -1027,6 +1206,40 @@ public sealed class MainPageViewModel(
 
         SelectedWorkspaceId = Workspaces.FirstOrDefault(x => string.Equals(x, settings.SelectedWorkspaceId, StringComparison.OrdinalIgnoreCase))
             ?? Workspaces[0];
+    }
+
+    private async Task EnsureDefaultWorkspaceSelectedOnFirstRunAsync(CancellationToken cancellationToken)
+    {
+        if (Workspaces.Count == 0)
+        {
+            Workspaces.Add(DefaultWorkspaceId);
+        }
+
+        var isFirstRunWorkspaceSet = Workspaces.Count == 1 &&
+                                     string.Equals(Workspaces[0], DefaultWorkspaceId, StringComparison.OrdinalIgnoreCase);
+        if (!isFirstRunWorkspaceSet)
+        {
+            return;
+        }
+
+        if (!string.Equals(SelectedWorkspaceId, DefaultWorkspaceId, StringComparison.OrdinalIgnoreCase))
+        {
+            SelectedWorkspaceId = DefaultWorkspaceId;
+            await SaveWorkspaceSettingsAsync(cancellationToken);
+        }
+    }
+
+    private void EnsureWorkspaceListReady()
+    {
+        if (Workspaces.Count == 0)
+        {
+            Workspaces.Add(DefaultWorkspaceId);
+        }
+
+        if (!Workspaces.Contains(SelectedWorkspaceId, StringComparer.OrdinalIgnoreCase))
+        {
+            SelectedWorkspaceId = Workspaces[0];
+        }
     }
 
     private async Task RefreshConnectorsAsync(CancellationToken cancellationToken)
@@ -1179,7 +1392,6 @@ public sealed class MainPageViewModel(
 
     private void AddTimeline(string message)
     {
-        _ = localLogService.LogAsync("timeline", message, CancellationToken.None);
         if (MainThread.IsMainThread)
         {
             Timeline.Add(message);
@@ -1187,6 +1399,18 @@ public sealed class MainPageViewModel(
         }
 
         MainThread.BeginInvokeOnMainThread(() => Timeline.Add(message));
+    }
+
+    private void SetFinalResponse(string message)
+    {
+        var value = message?.Trim() ?? string.Empty;
+        if (MainThread.IsMainThread)
+        {
+            FinalResponse = value;
+            return;
+        }
+
+        MainThread.BeginInvokeOnMainThread(() => FinalResponse = value);
     }
 
     private bool SetProperty<T>(ref T target, T value, [CallerMemberName] string? propertyName = null)

@@ -29,7 +29,6 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ICopilotExecutionSettingsStore>(_ => new JsonCopilotExecutionSettingsStore("OpenPlane"));
 		builder.Services.AddSingleton<IWorkspaceSettingsStore>(_ => new JsonWorkspaceSettingsStore("OpenPlane"));
 		builder.Services.AddSingleton<INetworkPolicyGuard, NetworkPolicyGuard>();
-		builder.Services.AddSingleton<ILocalLogService>(_ => new LocalLogService("OpenPlane"));
 		builder.Services.AddSingleton<ICopilotHealthService, CopilotHealthService>();
 		builder.Services.AddSingleton<ICopilotModelProvider, CopilotModelProvider>();
 		builder.Services.AddSingleton<ICopilotAuthService, CopilotAuthService>();
